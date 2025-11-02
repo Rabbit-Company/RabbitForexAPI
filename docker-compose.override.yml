@@ -1,0 +1,18 @@
+services:
+  rabbitforexapi:
+    build:
+      context: .
+    container_name: rabbitforexapi
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - UPDATE_INTERVAL
+      - LOGGER_LEVEL
+      - PROXY
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
