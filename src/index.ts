@@ -1,5 +1,5 @@
 import { Web } from "@rabbit-company/web";
-import { EuropeanCentralBankExchange } from "./exchanges/ecb";
+import { Exchange } from "./exchange";
 import { Logger } from "./logger";
 import { IP_EXTRACTION_PRESETS, ipExtract } from "@rabbit-company/web-middleware/ip-extract";
 import type { CloudProvider } from "./types";
@@ -10,22 +10,30 @@ import pkg from "../package.json";
 const host = process.env.SERVER_HOST || "0.0.0.0";
 const port = parseInt(process.env.SERVER_PORT || "3000") || 3000;
 const proxy = Object.keys(IP_EXTRACTION_PRESETS).includes(process.env.PROXY || "direct") ? (process.env.PROXY as CloudProvider) : "direct";
-const updateInterval = parseInt(process.env.UPDATE_INTERVAL || "3600") || 3600;
+const updateInterval = parseInt(process.env.UPDATE_INTERVAL || "60") || 60;
 
-const cacheControl = "public, s-maxage=43200, max-age=300, stale-while-revalidate=86400, stale-if-error=259200";
+const cacheControl = [
+	"public",
+	`max-age=${updateInterval}`,
+	`s-maxage=${updateInterval}`,
+	`stale-while-revalidate=${updateInterval * 10}`,
+	`stale-if-error=31536000`,
+].join(", ");
 
 Logger.setLevel(parseInt(process.env.LOGGER_LEVEL || "3") || 3);
 
-const ecb = new EuropeanCentralBankExchange();
+const exchange = new Exchange();
 
 try {
-	await ecb.initialize();
+	await exchange.initialize();
 } catch (error: any) {
-	Logger.error("Failed to initialize European Central Bank Exchange:", error);
+	Logger.error("Failed to initialize Exchange:", error);
 	process.exit(1);
 }
 
 const app = new Web();
+
+app.use(ipExtract(proxy));
 
 app.use(
 	logger({
@@ -40,8 +48,6 @@ app.use(
 	})
 );
 
-app.use(ipExtract(proxy));
-
 app.get("/", (c) => {
 	return c.json(
 		{
@@ -49,7 +55,9 @@ app.get("/", (c) => {
 			version: pkg.version,
 			sourceCode: "https://github.com/Rabbit-Company/RabbitForexAPI",
 			monitorStats: {
-				currencyCount: ecb.getSupportedCurrencies().length,
+				currencyCount: exchange.getSupportedCurrencies().length,
+				metalCount: exchange.getSupportedMetals().length,
+				totalAssetCount: exchange.getSupportedAssets().length,
 				updateInterval: `${updateInterval}s`,
 			},
 			httpStats: {
@@ -58,21 +66,54 @@ app.get("/", (c) => {
 			lastUpdate: new Date().toISOString(),
 		},
 		200,
-		{ "Cache-Control": "public, s-maxage=5, max-age=2, stale-while-revalidate=300, stale-if-error=86400" }
+		{ "Cache-Control": cacheControl }
 	);
 });
 
 app.get("/v1/rates", (c) => {
-	return c.json({ base: "EUR", rates: ecb.getRates("EUR"), lastUpdate: ecb.getLastUpdate()?.toISOString() }, 200, {
-		"Cache-Control": cacheControl,
-	});
+	return c.json(
+		{
+			base: "USD",
+			rates: exchange.getRates("USD"),
+			timestamps: {
+				metal: exchange.getLastMetalUpdate()?.toISOString(),
+				currency: exchange.getLastCurrencyUpdate()?.toISOString(),
+			},
+		},
+		200,
+		{ "Cache-Control": cacheControl }
+	);
 });
 
 app.get("/v1/rates/:currency", (c) => {
 	const currency = c.params["currency"]?.toUpperCase();
-	return c.json({ base: currency, rates: ecb.getRates(currency), lastUpdate: ecb.getLastUpdate()?.toISOString() }, 200, {
-		"Cache-Control": cacheControl,
-	});
+	return c.json(
+		{
+			base: currency,
+			rates: exchange.getRates(currency),
+			timestamps: {
+				metal: exchange.getLastMetalUpdate()?.toISOString(),
+				currency: exchange.getLastCurrencyUpdate()?.toISOString(),
+			},
+		},
+		200,
+		{ "Cache-Control": cacheControl }
+	);
+});
+
+app.get("/v1/assets", (c) => {
+	return c.json(
+		{
+			currencies: exchange.getSupportedCurrencies(),
+			metals: exchange.getSupportedMetals(),
+			timestamps: {
+				metal: exchange.getLastMetalUpdate()?.toISOString(),
+				currency: exchange.getLastCurrencyUpdate()?.toISOString(),
+			},
+		},
+		200,
+		{ "Cache-Control": cacheControl }
+	);
 });
 
 export const server = await app.listen({
@@ -85,5 +126,6 @@ Logger.info(`Server running on http://${host}:${port}`);
 Logger.info(`Exchange rates updates every ${updateInterval}s`);
 Logger.info("Available endpoints:");
 Logger.info("	GET /                      - Health check and stats");
-Logger.info("	GET /v1/rates              - Exchange rate data for EUR");
-Logger.info("	GET /v1/rates/:currency    - Exchange rate data for specified currency");
+Logger.info("	GET /v1/rates              - Exchange rates for USD (default)");
+Logger.info("	GET /v1/rates/:asset       - Exchange rates for specified asset");
+Logger.info("	GET /v1/assets             - List all supported currencies and metals");
