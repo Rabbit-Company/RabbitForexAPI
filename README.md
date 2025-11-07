@@ -72,7 +72,7 @@ docker run -d \
   rabbitcompany/rabbitforexapi:latest
 ```
 
-## API Endpoints
+## API Endpoints ([Swagger](https://docs.forex.rabbitmonitor.com))
 
 ### GET `/`
 
