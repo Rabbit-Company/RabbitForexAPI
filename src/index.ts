@@ -6,6 +6,7 @@ import type { CloudProvider } from "./types";
 import { logger } from "@rabbit-company/web-middleware/logger";
 import { cors } from "@rabbit-company/web-middleware/cors";
 import pkg from "../package.json";
+import { openapi } from "./openapi";
 
 const host = process.env.SERVER_HOST || "0.0.0.0";
 const port = parseInt(process.env.SERVER_PORT || "3000") || 3000;
@@ -70,6 +71,10 @@ app.get("/", (c) => {
 	);
 });
 
+app.get("/openapi.json", (c) => {
+	return c.json(openapi, 200, { "Cache-Control": "public, max-age=3600 s-maxage=3600 stale-while-revalidate=36000 stale-if-error=31536000" });
+});
+
 app.get("/v1/rates", (c) => {
 	return c.json(
 		{
@@ -126,6 +131,7 @@ Logger.info(`Server running on http://${host}:${port}`);
 Logger.info(`Exchange rates updates every ${updateInterval}s`);
 Logger.info("Available endpoints:");
 Logger.info("	GET /                      - Health check and stats");
+Logger.info("	GET /openapi.json          - OpenAPI specification");
 Logger.info("	GET /v1/rates              - Exchange rates for USD (default)");
 Logger.info("	GET /v1/rates/:asset       - Exchange rates for specified asset");
 Logger.info("	GET /v1/assets             - List all supported currencies and metals");

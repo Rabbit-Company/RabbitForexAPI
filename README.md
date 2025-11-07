@@ -96,6 +96,10 @@ Health Check and Statistics
 }
 ```
 
+### GET `/openapi.json`
+
+OpenAPI specification
+
 ### GET `/v1/rates`
 
 Get all exchange rates with USD as base (default)
