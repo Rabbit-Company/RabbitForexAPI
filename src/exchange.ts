@@ -146,7 +146,6 @@ export class Exchange {
 
 	private buildCryptoRateMatrix(cryptoRates: Record<string, number>, cryptoAssets: string[], forexAssets: string[]): ExchangeRates {
 		const rates: ExchangeRates = {};
-		const usdRate = 1;
 
 		// Build crypto to forex rates
 		for (const crypto of cryptoAssets) {
@@ -164,7 +163,7 @@ export class Exchange {
 				const forexToUsd = this.forexRates["USD"]?.[forex];
 				if (forexToUsd && forexToUsd > 0) {
 					// crypto -> USD -> forex
-					rates[crypto][forex] = this.roundRate(cryptoUsdRate / forexToUsd);
+					rates[crypto][forex] = this.roundRate(cryptoUsdRate * forexToUsd);
 				}
 			}
 		}
