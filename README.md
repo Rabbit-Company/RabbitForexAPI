@@ -297,7 +297,7 @@ The API supports 150+ currencies, including:
 - **American Currencies**: ARS, CLP, COP, PEN, UYU
 - And many more...
 
-### Metals (9)
+### Metals (4)
 
 - **GOLD** - Gold (per gram)
 - **SILVER** - Silver (per gram)
