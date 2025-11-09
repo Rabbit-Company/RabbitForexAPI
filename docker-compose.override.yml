@@ -9,6 +9,16 @@ services:
     environment:
       - METALS_DEV_API_KEY
       - UPDATE_INTERVAL
+      - USE_KRAKEN
+      - USE_BINANCE
+      - USE_GATEIO
+      - USE_KUCOIN
+      - USE_BINGX
+      - USE_BYBIT
+      - USE_CRYPTOCOM
+      - USE_BITFINEX
+      - CRYPTO_UPDATE_INTERVAL
+      - ENABLED_CRYPTOS
       - LOGGER_LEVEL
       - PROXY
     healthcheck:

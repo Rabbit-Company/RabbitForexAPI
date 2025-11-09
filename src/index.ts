@@ -58,6 +58,7 @@ app.get("/", (c) => {
 			monitorStats: {
 				currencyCount: exchange.getSupportedCurrencies().length,
 				metalCount: exchange.getSupportedMetals().length,
+				cryptoCount: exchange.getSupportedCryptocurrencies().length,
 				totalAssetCount: exchange.getSupportedAssets().length,
 				updateInterval: `${updateInterval}s`,
 			},
@@ -75,45 +76,81 @@ app.get("/openapi.json", (c) => {
 	return c.json(openapi, 200, { "Cache-Control": "public, max-age=3600 s-maxage=3600 stale-while-revalidate=36000 stale-if-error=31536000" });
 });
 
-app.get("/v1/rates", (c) => {
-	return c.json(
-		{
-			base: "USD",
-			rates: exchange.getRates("USD"),
-			timestamps: {
-				metal: exchange.getLastMetalUpdate()?.toISOString(),
-				currency: exchange.getLastCurrencyUpdate()?.toISOString(),
-			},
-		},
-		200,
-		{ "Cache-Control": cacheControl }
-	);
-});
-
-app.get("/v1/rates/:currency", (c) => {
-	const currency = c.params["currency"]?.toUpperCase();
-	return c.json(
-		{
-			base: currency,
-			rates: exchange.getRates(currency),
-			timestamps: {
-				metal: exchange.getLastMetalUpdate()?.toISOString(),
-				currency: exchange.getLastCurrencyUpdate()?.toISOString(),
-			},
-		},
-		200,
-		{ "Cache-Control": cacheControl }
-	);
-});
-
 app.get("/v1/assets", (c) => {
 	return c.json(
 		{
 			currencies: exchange.getSupportedCurrencies(),
 			metals: exchange.getSupportedMetals(),
+			cryptocurrencies: exchange.getSupportedCryptocurrencies(),
 			timestamps: {
-				metal: exchange.getLastMetalUpdate()?.toISOString(),
 				currency: exchange.getLastCurrencyUpdate()?.toISOString(),
+				metal: exchange.getLastMetalUpdate()?.toISOString(),
+				crypto: exchange.getLastCryptoUpdate()?.toISOString(),
+			},
+		},
+		200,
+		{ "Cache-Control": cacheControl }
+	);
+});
+
+app.get("/v1/rates", (c) => {
+	return c.json(
+		{
+			base: "USD",
+			rates: exchange.getForexRates("USD"),
+			timestamps: {
+				currency: exchange.getLastCurrencyUpdate()?.toISOString(),
+				metal: exchange.getLastMetalUpdate()?.toISOString(),
+			},
+		},
+		200,
+		{ "Cache-Control": cacheControl }
+	);
+});
+
+app.get("/v1/rates/:base", (c) => {
+	const base = c.params["base"]!.toUpperCase();
+	return c.json(
+		{
+			base: base,
+			rates: exchange.getForexRates(base),
+			timestamps: {
+				currency: exchange.getLastCurrencyUpdate()?.toISOString(),
+				metal: exchange.getLastMetalUpdate()?.toISOString(),
+			},
+		},
+		200,
+		{ "Cache-Control": cacheControl }
+	);
+});
+
+app.get("/v1/crypto/rates", (c) => {
+	return c.json(
+		{
+			base: "USD",
+			rates: exchange.getCryptoRates("USD"),
+			timestamps: {
+				currency: exchange.getLastCurrencyUpdate()?.toISOString(),
+				metal: exchange.getLastMetalUpdate()?.toISOString(),
+				crypto: exchange.getLastCryptoUpdate()?.toISOString(),
+			},
+		},
+		200,
+		{ "Cache-Control": cacheControl }
+	);
+});
+
+app.get("/v1/crypto/rates/:base", (c) => {
+	const base = c.params["base"]!.toUpperCase();
+
+	return c.json(
+		{
+			base: base,
+			rates: exchange.getCryptoRates(base),
+			timestamps: {
+				currency: exchange.getLastCurrencyUpdate()?.toISOString(),
+				metal: exchange.getLastMetalUpdate()?.toISOString(),
+				crypto: exchange.getLastCryptoUpdate()?.toISOString(),
 			},
 		},
 		200,
@@ -130,8 +167,10 @@ Logger.info("RabbitForexAPI started successfully");
 Logger.info(`Server running on http://${host}:${port}`);
 Logger.info(`Exchange rates updates every ${updateInterval}s`);
 Logger.info("Available endpoints:");
-Logger.info("	GET /                      - Health check and stats");
-Logger.info("	GET /openapi.json          - OpenAPI specification");
-Logger.info("	GET /v1/rates              - Exchange rates for USD (default)");
-Logger.info("	GET /v1/rates/:asset       - Exchange rates for specified asset");
-Logger.info("	GET /v1/assets             - List all supported currencies and metals");
+Logger.info("	GET /                       - Health check and stats");
+Logger.info("	GET /openapi.json           - OpenAPI specification");
+Logger.info("	GET /v1/assets              - List all supported currencies, metals and cryptocurrencies");
+Logger.info("	GET /v1/rates               - Exchange rates for USD (default)");
+Logger.info("	GET /v1/rates/:asset        - Exchange rates for specified asset");
+Logger.info("	GET /v1/crypto/rates        - Cryptocurrency rates for USD (default)");
+Logger.info("	GET /v1/crypto/rates/:asset - Cryptocurrency rates for specified asset");

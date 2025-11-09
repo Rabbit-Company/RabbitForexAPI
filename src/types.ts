@@ -5,3 +5,7 @@ export interface ExchangeRates {
 		[targetCurrency: string]: number;
 	};
 }
+
+export interface CryptocurrencyRates {
+	[crypto: string]: number;
+}
