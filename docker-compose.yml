@@ -8,6 +8,9 @@ services:
     environment:
       - WISE_API_KEY
       - UPDATE_INTERVAL
+      - TRADING212_API_KEY
+      - TRADING212_API_SECRET
+      - STOCK_UPDATE_INTERVAL
       - USE_KRAKEN
       - USE_BINANCE
       - USE_GATEIO

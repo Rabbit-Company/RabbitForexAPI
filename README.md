@@ -1,12 +1,13 @@
 # RabbitForexAPI 🐰💱
 
-A high-performance foreign exchange (Forex), precious metals, and cryptocurrency API built with Bun that fetches real-time exchange rate data from multiple sources and serves it through a REST API.
+A high-performance foreign exchange (Forex), precious metals, stocks, and cryptocurrency API built with Bun that fetches real-time exchange rate data from multiple sources and serves it through a REST API.
 
 ## Features
 
 - 🚀 Blazing Fast - Built with Bun for optimal performance
 - 💱 Real-time Forex Data - Automatically updates exchange rates at configurable intervals
 - ₿ Cryptocurrency Support - Real-time crypto prices from multiple exchanges (Binance, Kraken, Gate, KuCoin, BingX, ByBit, Crypto.com, Bitfinex)
+- 📈 Stock Prices - Real-time stock data from Trading212
 - 🌍 Multi-currency Support - Convert between 150+ currencies with accurate cross-rates
 - 🥇 Metals - Gold, Silver, Palladium, Copper
 - 📊 Wise - Reliable source for exchange rates
@@ -38,8 +39,18 @@ WISE_API_KEY="your_wise_api_key_here"
 
 # Update Interval (in seconds)
 # How often to fetch new exchange rates from Wise API
-# Default: 60 (1 minute)
-UPDATE_INTERVAL=60
+# Default: 30 (30 seconds)
+UPDATE_INTERVAL=30
+
+# Trading212 Configuration
+# Get your API key from https://www.trading212.com
+TRADING212_API_KEY="your_trading212_api_key_here"
+TRADING212_API_SECRET="your_trading212_api_secret_here"
+
+# Stock Update Interval (in seconds)
+# How often to fetch new stock prices from Trading212 API
+# Default: 30 (30 seconds) - Minimum: 10 (10 seconds)
+STOCK_UPDATE_INTERVAL=30
 
 # Crypto Exchange Configuration
 # Enable or disable fetching prices from crypto exchanges
@@ -86,8 +97,11 @@ docker-compose up -d
 docker run -d \
   --name rabbitforexapi \
   -p 3000:3000 \
-	-e WISE_API_KEY="your_api_key_here" \
-  -e UPDATE_INTERVAL=60 \
+	-e WISE_API_KEY="your_wise_api_key_here" \
+  -e UPDATE_INTERVAL=30 \
+	-e TRADING212_API_KEY="your_trading212_api_key_here" \
+  -e TRADING212_API_SECRET="your_trading212_api_secret_here" \
+  -e STOCK_UPDATE_INTERVAL=30 \
 	-e CRYPTO_UPDATE_INTERVAL=30 \
 	-e ENABLED_CRYPTOS="BTC,ETH,SOL,ADA,XRP" \
   -e LOGGER_LEVEL=3 \
@@ -104,14 +118,15 @@ Health Check and Statistics
 ```json
 {
 	"program": "RabbitForexAPI",
-	"version": "3.1.0",
+	"version": "4.0.0",
 	"sourceCode": "https://github.com/Rabbit-Company/RabbitForexAPI",
 	"monitorStats": {
 		"currencyCount": 162,
 		"metalCount": 4,
-		"cryptoCount": 2885,
-		"totalAssetCount": 3051,
-		"updateInterval": "60s"
+		"cryptoCount": 2886,
+		"stockCount": 23,
+		"totalAssetCount": 3075,
+		"updateInterval": "30s"
 	},
 	"httpStats": {
 		"pendingRequests": 1
@@ -137,13 +152,9 @@ Get all exchange rates with USD as base (default)
 		"JPY": 153.4793,
 		"GBP": 0.7624,
 		"CHF": 0.80776,
-		"GOLD": 0.0077614,
-		"SILVER": 0.63833,
-		"PLATINUM": 0.020007,
 		"...": "..."
 	},
 	"timestamps": {
-		"metal": "2025-11-07T07:06:07.016Z",
 		"currency": "2025-11-07T07:06:10.544Z"
 	}
 }
@@ -151,29 +162,7 @@ Get all exchange rates with USD as base (default)
 
 ### GET `/v1/rates/:asset`
 
-Get all exchange rates with specified asset as base (currency or metal)
-
-**Example**: `/v1/rates/GOLD` - Gold as base
-
-```json
-{
-	"base": "GOLD",
-	"rates": {
-		"USD": 128.8432,
-		"EUR": 111.7092,
-		"JPY": 19774.7612,
-		"GBP": 98.2304,
-		"GOLD": 1,
-		"SILVER": 82.2438,
-		"PLATINUM": 2.5778,
-		"...": "..."
-	},
-	"timestamps": {
-		"metal": "2025-11-07T07:06:07.016Z",
-		"currency": "2025-11-07T07:06:10.544Z"
-	}
-}
-```
+Get all exchange rates with specified asset as base
 
 Example: `/v1/rates/EUR` - Euro as base
 
@@ -185,13 +174,71 @@ Example: `/v1/rates/EUR` - Euro as base
 		"USD": 1.1534,
 		"JPY": 177.02,
 		"GBP": 0.87934,
-		"GOLD": 0.0089518,
-		"SILVER": 0.73623,
 		"...": "..."
 	},
 	"timestamps": {
-		"metal": "2025-11-07T07:06:07.016Z",
 		"currency": "2025-11-07T07:06:10.544Z"
+	}
+}
+```
+
+### GET `/v1/metals/rates`
+
+Get all metal rates with USD as base (default)
+
+```json
+{
+	"base": "USD",
+	"rates": {
+		"GOLD": 0.0077614,
+		"SILVER": 0.63833,
+		"PLATINUM": 0.020007,
+		"COPPER": 93.4827
+	},
+	"timestamps": {
+		"currency": "2025-11-07T07:06:10.544Z",
+		"metal": "2025-11-07T07:06:07.016Z"
+	}
+}
+```
+
+### GET `/v1/metals/rates/:asset`
+
+Get all metal rates with specified asset as base (currency or metal)
+
+**Example**: `/v1/metals/rates/GOLD` - Gold as base
+
+```json
+{
+	"base": "GOLD",
+	"rates": {
+		"USD": 128.8432,
+		"EUR": 111.7092,
+		"JPY": 19774.7612,
+		"GBP": 98.2304,
+		"...": "..."
+	},
+	"timestamps": {
+		"currency": "2025-11-07T07:06:10.544Z",
+		"metal": "2025-11-07T07:06:07.016Z"
+	}
+}
+```
+
+Example: `/v1/metals/rates/EUR` - Euro as base
+
+```json
+{
+	"base": "EUR",
+	"rates": {
+		"GOLD": 0.0081904,
+		"SILVER": 0.67794,
+		"PALLADIUM": 0.023327,
+		"COPPER": 108.0754
+	},
+	"timestamps": {
+		"currency": "2025-11-09T21:00:31.465Z",
+		"metal": "2025-11-09T21:00:31.153Z"
 	}
 }
 ```
@@ -214,7 +261,6 @@ Get all cryptocurrency rates with USD as base (default)
 	},
 	"timestamps": {
 		"currency": "2025-11-07T07:06:10.544Z",
-		"metal": "2025-11-07T07:06:07.016Z",
 		"crypto": "2025-11-07T07:06:05.123Z"
 	}
 }
@@ -222,7 +268,7 @@ Get all cryptocurrency rates with USD as base (default)
 
 ### GET `/v1/crypto/rates/:asset`
 
-Get all cryptocurrency rates with specified asset as base (currency, metal, or cryptocurrency)
+Get all cryptocurrency rates with specified asset as base (currency or cryptocurrency)
 
 Example: `/v1/crypto/rates/BTC` - Bitcoin as base
 
@@ -236,7 +282,6 @@ Example: `/v1/crypto/rates/BTC` - Bitcoin as base
 	},
 	"timestamps": {
 		"currency": "2025-11-07T07:06:10.544Z",
-		"metal": "2025-11-07T07:06:07.016Z",
 		"crypto": "2025-11-07T07:06:05.123Z"
 	}
 }
@@ -258,8 +303,79 @@ Example: `/v1/crypto/rates/EUR` - Euro as base for crypto rates
 	},
 	"timestamps": {
 		"currency": "2025-11-07T07:06:10.544Z",
-		"metal": "2025-11-07T07:06:07.016Z",
 		"crypto": "2025-11-07T07:06:05.123Z"
+	}
+}
+```
+
+### GET `/v1/stocks/rates`
+
+Get all stock rates with USD as base (default)
+
+```json
+{
+	"base": "USD",
+	"rates": {
+		"VOW3d": 0.01227,
+		"NET": 0.004275,
+		"MSFT": 0.0020088,
+		"ASMLa": 0.0013276,
+		"V": 0.0029717,
+		"UBNT": 0.0016181,
+		"SMSDl": 0.00078125,
+		"FB": 0.0015993,
+		"...": "..."
+	},
+	"timestamps": {
+		"currency": "2025-11-07T07:06:10.544Z",
+		"stock": "2025-11-07T07:06:05.123Z"
+	}
+}
+```
+
+### GET `/v1/stocks/rates/:asset`
+
+Get all stock rates with specified asset as base (currency or stock)
+
+Example: `/v1/stocks/rates/NET` - Cloudflare as base
+
+```json
+{
+	"base": "NET",
+	"rates": {
+		"USD": 233.92,
+		"HRK": 35.8903,
+		"GHS": 21.4114,
+		"BSD": 233.92,
+		"BAM": 138.2631,
+		"...": "..."
+	},
+	"timestamps": {
+		"currency": "2025-11-07T07:06:10.544Z",
+		"stock": "2025-11-07T07:06:05.123Z"
+	}
+}
+```
+
+Example: `/v1/stocks/rates/EUR` - Euro as base for stock rates
+
+```json
+{
+	"base": "EUR",
+	"rates": {
+		"VOW3d": 0.010613,
+		"NET": 0.0036976,
+		"MSFT": 0.0017375,
+		"ASMLa": 0.0011484,
+		"V": 0.0025703,
+		"UBNT": 0.0013996,
+		"SMSDl": 0.00067573,
+		"FB": 0.0013833,
+		"...": "..."
+	},
+	"timestamps": {
+		"currency": "2025-11-07T07:06:10.544Z",
+		"stock": "2025-11-07T07:06:05.123Z"
 	}
 }
 ```
@@ -276,7 +392,8 @@ Get lists of all supported currencies, metals and cryptocurrencies
 	"timestamps": {
 		"currency": "2025-11-07T07:06:10.544Z",
 		"metal": "2025-11-07T07:06:07.016Z",
-		"crypto": "2025-11-07T07:06:05.123Z"
+		"crypto": "2025-11-07T07:06:05.123Z",
+		"stock": "2025-11-07T07:06:05.123Z"
 	}
 }
 ```
@@ -303,6 +420,16 @@ The API supports 150+ currencies, including:
 - **SILVER** - Silver (per gram)
 - **PALLADIUM** - Palladium (per gram)
 - **COPPER** - Copper (per gram)
+
+### Stocks (20+)
+
+The API supports various stocks from major exchanges including:
+
+- **Technology**: MSFT, NET, FB, UBNT, ASMLa
+- **Automotive**: VOW3d
+- **Financial**: V
+- **Telecommunications**: SMSDl
+- And many more...
 
 ### Cryptocurrencies (2500+)
 
@@ -333,6 +460,14 @@ Rates are rounded intelligently based on their magnitude:
 - **Rates 0.1-1**: 5 decimal places
 - **Rates 0.01-0.1**: 6 decimal places
 - And progressively more precision for smaller rates
+
+### Stock Rates
+
+Stock prices are fetched from Trading212 API:
+
+- **Direct Pricing**: Stocks are priced in their native currency (USD, EUR, GBP, etc.)
+- **Cross-currency Conversion**: Stock prices are converted to other currencies using forex rates
+- **GBX Handling**: British penny stocks (GBX) are automatically converted to GBP
 
 ### Cryptocurrency Rates
 

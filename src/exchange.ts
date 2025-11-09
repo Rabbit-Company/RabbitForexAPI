@@ -1,6 +1,8 @@
 import { CryptoExchange } from "./crypto";
 import { Logger } from "./logger";
-import type { ExchangeRates } from "./types";
+import { MetalExchange } from "./metals";
+import { StockExchange } from "./stock";
+import type { ExchangeRates, MetalData, StockData } from "./types";
 
 interface WiseRate {
 	source: string;
@@ -9,25 +11,21 @@ interface WiseRate {
 	time: string;
 }
 
-interface GoldAPIResponse {
-	name: string;
-	price: number;
-	symbol: string;
-	updatedAt: string;
-	updatedAtReadable: string;
-}
-
 export class Exchange {
 	private forexRates: ExchangeRates = {};
 	private cryptoRates: ExchangeRates = {};
+	private stockRates: ExchangeRates = {};
+	private metalRates: ExchangeRates = {};
 
 	private metals: Set<string> = new Set();
 	private currencies: Set<string> = new Set();
 	private cryptocurrencies: Set<string> = new Set();
+	private stocks: Set<string> = new Set();
 
 	private lastMetalUpdate: Date | null = null;
 	private lastCurrencyUpdate: Date | null = null;
 	private lastCryptoUpdate: Date | null = null;
+	private lastStockUpdate: Date | null = null;
 	private lastUpdate: Date | null = null;
 
 	private updateInterval: number = parseInt(process.env.UPDATE_INTERVAL || "60") || 60;
@@ -36,15 +34,8 @@ export class Exchange {
 	private wiseApiKey: string;
 	private baseCurrency: string = "USD";
 	private cryptoExchange: CryptoExchange;
-
-	// Metal symbols mapping
-	private metalSymbols = ["XAU", "XAG", "XPD", "HG"];
-	private metalMapping: { [key: string]: string } = {
-		XAU: "GOLD",
-		XAG: "SILVER",
-		XPD: "PALLADIUM",
-		HG: "COPPER",
-	};
+	private stockExchange: StockExchange;
+	private metalExchange: MetalExchange;
 
 	constructor() {
 		this.wiseApiKey = process.env.WISE_API_KEY || "";
@@ -54,10 +45,14 @@ export class Exchange {
 		}
 
 		this.cryptoExchange = new CryptoExchange();
+		this.stockExchange = new StockExchange();
+		this.metalExchange = new MetalExchange();
 	}
 
 	async initialize(): Promise<void> {
 		await this.cryptoExchange.initialize();
+		await this.stockExchange.initialize();
+		await this.metalExchange.initialize();
 		await this.updateRates();
 		this.startPeriodicUpdate();
 	}
@@ -67,6 +62,7 @@ export class Exchange {
 			await this.updateForexRates();
 			await this.updateMetalRates();
 			await this.updateCryptoRates();
+			await this.updateStockRates();
 			this.lastUpdate = new Date();
 		} catch (err: any) {
 			Logger.error("[Exchange] Failed to update exchange rates:", err);
@@ -119,90 +115,76 @@ export class Exchange {
 	}
 
 	private async updateMetalRates(): Promise<void> {
-		try {
-			const metalPrices = await this.fetchMetalPrices();
+		const metalData = this.metalExchange.getMetals();
+		this.metals = new Set(Object.keys(metalData.metals));
+		this.lastMetalUpdate = this.metalExchange.getLastUpdate();
 
-			const metals: Set<string> = new Set();
-			const usdBaseRates: Record<string, number> = { ...(this.forexRates[this.baseCurrency] || {}) };
+		const allForexAssets = Array.from(this.currencies);
+		const allMetalAssets = Array.from(this.metals);
 
-			for (const [symbol, price] of Object.entries(metalPrices)) {
-				if (price > 0) {
-					// Convert (price per ounce or price per pound) to price per gram
-					const pricePerGram = symbol === "HG" ? price / 453.59237 : price / 28.349523125;
-					const metalCode = this.metalMapping[symbol];
-					if (metalCode) {
-						usdBaseRates[metalCode] = pricePerGram;
-						metals.add(metalCode);
-					}
-				}
-			}
+		this.metalRates = this.buildMetalRateMatrix(metalData.metals, allMetalAssets, allForexAssets);
 
-			this.metals = metals;
-			this.lastMetalUpdate = new Date();
-
-			// Update forex rates to include metals
-			const allAssets = [...Array.from(this.currencies), ...Array.from(metals)];
-			this.forexRates = this.buildRateMatrix(usdBaseRates, allAssets);
-
-			Logger.debug(`[Exchange] Metal rates updated for ${metals.size} metals.`);
-		} catch (err: any) {
-			Logger.error("[Exchange] Failed to fetch metal rates:", err);
-			// Don't throw - metals are secondary, continue with forex rates only
-		}
+		Logger.debug(`[Exchange] Metal rates updated for ${allMetalAssets.length} metals.`);
 	}
 
-	private async fetchMetalPrices(): Promise<{ [symbol: string]: number }> {
-		const metalPrices: { [symbol: string]: number } = {};
-		const promises = [];
+	private buildMetalRateMatrix(metalRates: Record<string, MetalData>, metalAssets: string[], forexAssets: string[]): ExchangeRates {
+		const rates: ExchangeRates = {};
 
-		// Fetch all metal prices in parallel
-		for (const symbol of this.metalSymbols) {
-			promises.push(this.fetchSingleMetalPrice(symbol));
-		}
+		// Build metal to forex rates
+		for (const metal of metalAssets) {
+			rates[metal] = {};
+			const metalData = metalRates[metal];
+			if (!metalData) continue;
 
-		try {
-			const results = await Promise.allSettled(promises);
+			const metalPriceUSD = metalData.price;
 
-			for (let i = 0; i < results.length; i++) {
-				const result = results[i]!;
-				const symbol = this.metalSymbols[i]!;
+			// Metal to USD (direct)
+			rates[metal]["USD"] = this.roundRate(metalPriceUSD);
 
-				if (result.status === "fulfilled" && result.value !== null) {
-					metalPrices[symbol] = result.value;
-				} else {
-					Logger.warn(`[Exchange] Failed to fetch price for ${symbol}`);
-					metalPrices[symbol] = 0; // Mark as failed
+			// Metal to other forex (via USD)
+			for (const forex of forexAssets) {
+				if (forex === "USD") continue;
+
+				// Get forex to USD rate from forex rates
+				const forexToUsd = this.forexRates["USD"]?.[forex];
+				if (forexToUsd && forexToUsd > 0) {
+					// metal -> USD -> forex
+					rates[metal][forex] = this.roundRate(metalPriceUSD * forexToUsd);
 				}
 			}
-		} catch (err: any) {
-			Logger.error("[Exchange] Error fetching metal prices:", err);
 		}
 
-		return metalPrices;
-	}
-
-	private async fetchSingleMetalPrice(symbol: string): Promise<number | null> {
-		try {
-			const response = await fetch(`https://api.gold-api.com/price/${symbol}`, {
-				signal: AbortSignal.timeout(5000),
-			});
-
-			if (!response.ok) {
-				throw new Error(`Gold-API HTTP error for ${symbol}! status: ${response.status}`);
+		// Build forex to metal rates
+		for (const forex of forexAssets) {
+			if (!rates[forex]) {
+				rates[forex] = {};
 			}
 
-			const data = (await response.json()) as GoldAPIResponse;
+			const forexToUsd = this.forexRates["USD"]?.[forex];
+			if (forexToUsd && forexToUsd > 0) {
+				for (const metal of metalAssets) {
+					const metalData = metalRates[metal];
+					if (!metalData) continue;
 
-			if (data.price && data.price > 0) {
-				Logger.silly(`[Exchange] ${symbol} price: ${data.price}`);
-				return data.price;
-			} else {
-				throw new Error(`Invalid price for ${symbol}: ${data.price}`);
+					const metalPriceUSD = metalData.price;
+					// forex -> USD -> metal
+					rates[forex][metal] = this.roundRate(forexToUsd / metalPriceUSD);
+				}
 			}
-		} catch (err: any) {
-			Logger.error(`[Exchange] Failed to fetch ${symbol} price:`, err.message);
-			return null;
 		}
+
+		// Ensure USD has all metal rates
+		if (!rates["USD"]) {
+			rates["USD"] = {};
+		}
+		for (const metal of metalAssets) {
+			const metalData = metalRates[metal];
+			if (metalData) {
+				rates["USD"][metal] = this.roundRate(1 / metalData.price);
+			}
+		}
+
+		return rates;
 	}
 
 	private async updateCryptoRates(): Promise<void> {
@@ -210,7 +192,7 @@ export class Exchange {
 		this.cryptocurrencies = new Set(Object.keys(cryptoRates));
 		this.lastCryptoUpdate = this.cryptoExchange.getLastUpdate();
 
-		const allForexAssets = [...this.currencies, ...this.metals];
+		const allForexAssets = [...this.currencies];
 		const allCryptoAssets = Object.keys(cryptoRates);
 
 		this.cryptoRates = this.buildCryptoRateMatrix(cryptoRates, allCryptoAssets, allForexAssets);
@@ -297,6 +279,72 @@ export class Exchange {
 		return rates;
 	}
 
+	private async updateStockRates(): Promise<void> {
+		const stockData = this.stockExchange.getStocks();
+		this.stocks = new Set(Object.keys(stockData.stocks));
+		this.lastStockUpdate = this.stockExchange.getLastUpdate();
+
+		const allForexAssets = Array.from(this.currencies);
+		const allStockAssets = Array.from(this.stocks);
+
+		this.stockRates = this.buildStockRateMatrix(stockData.stocks, allStockAssets, allForexAssets);
+
+		Logger.debug(`[Exchange] Stock rates updated for ${allStockAssets.length} stocks.`);
+	}
+
+	private buildStockRateMatrix(stockRates: Record<string, StockData>, stockAssets: string[], forexAssets: string[]): ExchangeRates {
+		const rates: ExchangeRates = {};
+
+		// Build stock to forex rates
+		for (const stock of stockAssets) {
+			rates[stock] = {};
+			const stockData = stockRates[stock];
+			if (!stockData) continue;
+
+			const stockPrice = stockData.price;
+			const stockCurrency = stockData.currency;
+
+			// Stock to its own currency (direct)
+			rates[stock][stockCurrency] = this.roundRate(stockPrice);
+
+			// Stock to other forex (via stock's currency)
+			for (const forex of forexAssets) {
+				if (forex === stockCurrency) continue;
+
+				// Get forex conversion rate from forex rates
+				const currencyToForex = this.forexRates[stockCurrency]?.[forex];
+				if (currencyToForex && currencyToForex > 0) {
+					// stock -> stockCurrency -> forex
+					rates[stock][forex] = this.roundRate(stockPrice * currencyToForex);
+				}
+			}
+		}
+
+		// Build forex to stock rates
+		for (const forex of forexAssets) {
+			if (!rates[forex]) {
+				rates[forex] = {};
+			}
+
+			for (const stock of stockAssets) {
+				const stockData = stockRates[stock];
+				if (!stockData) continue;
+
+				const stockPrice = stockData.price;
+				const stockCurrency = stockData.currency;
+
+				// Get forex to stock's currency rate
+				const forexToCurrency = this.forexRates[forex]?.[stockCurrency];
+				if (forexToCurrency && forexToCurrency > 0) {
+					// forex -> stockCurrency -> stock
+					rates[forex][stock] = this.roundRate(forexToCurrency / stockPrice);
+				}
+			}
+		}
+
+		return rates;
+	}
+
 	startPeriodicUpdate(): void {
 		this.intervalId = setInterval(async () => {
 			try {
@@ -313,6 +361,8 @@ export class Exchange {
 			this.intervalId = null;
 		}
 		this.cryptoExchange.stop();
+		this.stockExchange.stop();
+		this.metalExchange.stop();
 	}
 
 	convertForex(amount: number, from: string, to: string): number | undefined {
@@ -350,6 +400,14 @@ export class Exchange {
 		return this.cryptoRates[base] || {};
 	}
 
+	getStockRates(base: string = "USD"): Record<string, number> {
+		return this.stockRates[base] || {};
+	}
+
+	getMetalRates(base: string = "USD"): Record<string, number> {
+		return this.metalRates[base] || {};
+	}
+
 	getSupportedCurrencies(): string[] {
 		return Array.from(this.currencies).sort();
 	}
@@ -362,8 +420,12 @@ export class Exchange {
 		return Array.from(this.cryptocurrencies).sort();
 	}
 
+	getSupportedStocks(): string[] {
+		return Array.from(this.stocks).sort();
+	}
+
 	getSupportedAssets(): string[] {
-		return [...this.getSupportedCurrencies(), ...this.getSupportedMetals(), ...this.getSupportedCryptocurrencies()].sort();
+		return [...this.getSupportedCurrencies(), ...this.getSupportedMetals(), ...this.getSupportedCryptocurrencies(), ...this.getSupportedStocks()].sort();
 	}
 
 	isMetal(symbol: string): boolean {
@@ -376,6 +438,10 @@ export class Exchange {
 
 	isCryptocurrency(symbol: string): boolean {
 		return this.cryptocurrencies.has(symbol);
+	}
+
+	isStock(symbol: string): boolean {
+		return this.stocks.has(symbol);
 	}
 
 	getLastUpdate(): Date | null {
@@ -392,6 +458,10 @@ export class Exchange {
 
 	getLastCryptoUpdate(): Date | null {
 		return this.lastCryptoUpdate;
+	}
+
+	getLastStockUpdate(): Date | null {
+		return this.lastStockUpdate;
 	}
 
 	private roundRate(rate: number): number {

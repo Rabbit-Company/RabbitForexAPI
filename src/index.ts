@@ -11,7 +11,7 @@ import { openapi } from "./openapi";
 const host = process.env.SERVER_HOST || "0.0.0.0";
 const port = parseInt(process.env.SERVER_PORT || "3000") || 3000;
 const proxy = Object.keys(IP_EXTRACTION_PRESETS).includes(process.env.PROXY || "direct") ? (process.env.PROXY as CloudProvider) : "direct";
-const updateInterval = parseInt(process.env.UPDATE_INTERVAL || "60") || 60;
+const updateInterval = parseInt(process.env.UPDATE_INTERVAL || "30") || 30;
 
 const cacheControl = [
 	"public",
@@ -59,6 +59,7 @@ app.get("/", (c) => {
 				currencyCount: exchange.getSupportedCurrencies().length,
 				metalCount: exchange.getSupportedMetals().length,
 				cryptoCount: exchange.getSupportedCryptocurrencies().length,
+				stockCount: exchange.getSupportedStocks().length,
 				totalAssetCount: exchange.getSupportedAssets().length,
 				updateInterval: `${updateInterval}s`,
 			},
@@ -82,10 +83,12 @@ app.get("/v1/assets", (c) => {
 			currencies: exchange.getSupportedCurrencies(),
 			metals: exchange.getSupportedMetals(),
 			cryptocurrencies: exchange.getSupportedCryptocurrencies(),
+			stocks: exchange.getSupportedStocks(),
 			timestamps: {
 				currency: exchange.getLastCurrencyUpdate()?.toISOString(),
 				metal: exchange.getLastMetalUpdate()?.toISOString(),
 				crypto: exchange.getLastCryptoUpdate()?.toISOString(),
+				stock: exchange.getLastStockUpdate()?.toISOString(),
 			},
 		},
 		200,
@@ -100,7 +103,6 @@ app.get("/v1/rates", (c) => {
 			rates: exchange.getForexRates("USD"),
 			timestamps: {
 				currency: exchange.getLastCurrencyUpdate()?.toISOString(),
-				metal: exchange.getLastMetalUpdate()?.toISOString(),
 			},
 		},
 		200,
@@ -114,6 +116,37 @@ app.get("/v1/rates/:base", (c) => {
 		{
 			base: base,
 			rates: exchange.getForexRates(base),
+			timestamps: {
+				currency: exchange.getLastCurrencyUpdate()?.toISOString(),
+			},
+		},
+		200,
+		{ "Cache-Control": cacheControl }
+	);
+});
+
+app.get("/v1/metals/rates", (c) => {
+	return c.json(
+		{
+			base: "USD",
+			rates: exchange.getMetalRates("USD"),
+			timestamps: {
+				currency: exchange.getLastCurrencyUpdate()?.toISOString(),
+				metal: exchange.getLastMetalUpdate()?.toISOString(),
+			},
+		},
+		200,
+		{ "Cache-Control": cacheControl }
+	);
+});
+
+app.get("/v1/metals/rates/:base", (c) => {
+	const base = c.params["base"]!.toUpperCase();
+
+	return c.json(
+		{
+			base: base,
+			rates: exchange.getMetalRates(base),
 			timestamps: {
 				currency: exchange.getLastCurrencyUpdate()?.toISOString(),
 				metal: exchange.getLastMetalUpdate()?.toISOString(),
@@ -131,7 +164,6 @@ app.get("/v1/crypto/rates", (c) => {
 			rates: exchange.getCryptoRates("USD"),
 			timestamps: {
 				currency: exchange.getLastCurrencyUpdate()?.toISOString(),
-				metal: exchange.getLastMetalUpdate()?.toISOString(),
 				crypto: exchange.getLastCryptoUpdate()?.toISOString(),
 			},
 		},
@@ -149,8 +181,39 @@ app.get("/v1/crypto/rates/:base", (c) => {
 			rates: exchange.getCryptoRates(base),
 			timestamps: {
 				currency: exchange.getLastCurrencyUpdate()?.toISOString(),
-				metal: exchange.getLastMetalUpdate()?.toISOString(),
 				crypto: exchange.getLastCryptoUpdate()?.toISOString(),
+			},
+		},
+		200,
+		{ "Cache-Control": cacheControl }
+	);
+});
+
+app.get("/v1/stocks/rates", (c) => {
+	return c.json(
+		{
+			base: "USD",
+			rates: exchange.getStockRates("USD"),
+			timestamps: {
+				currency: exchange.getLastCurrencyUpdate()?.toISOString(),
+				stock: exchange.getLastStockUpdate()?.toISOString(),
+			},
+		},
+		200,
+		{ "Cache-Control": cacheControl }
+	);
+});
+
+app.get("/v1/stocks/rates/:base", (c) => {
+	const base = c.params["base"]!.toUpperCase();
+
+	return c.json(
+		{
+			base: base,
+			rates: exchange.getStockRates(base),
+			timestamps: {
+				currency: exchange.getLastCurrencyUpdate()?.toISOString(),
+				stock: exchange.getLastStockUpdate()?.toISOString(),
 			},
 		},
 		200,
@@ -169,8 +232,12 @@ Logger.info(`Exchange rates updates every ${updateInterval}s`);
 Logger.info("Available endpoints:");
 Logger.info("	GET /                       - Health check and stats");
 Logger.info("	GET /openapi.json           - OpenAPI specification");
-Logger.info("	GET /v1/assets              - List all supported currencies, metals and cryptocurrencies");
+Logger.info("	GET /v1/assets              - List all supported currencies, metals, stocks and cryptocurrencies");
 Logger.info("	GET /v1/rates               - Exchange rates for USD (default)");
 Logger.info("	GET /v1/rates/:asset        - Exchange rates for specified asset");
+Logger.info("	GET /v1/metals/rates        - Metal rates for USD (default)");
+Logger.info("	GET /v1/metals/rates/:asset - Metal rates for specified asset");
 Logger.info("	GET /v1/crypto/rates        - Cryptocurrency rates for USD (default)");
 Logger.info("	GET /v1/crypto/rates/:asset - Cryptocurrency rates for specified asset");
+Logger.info("	GET /v1/stocks/rates        - Stock rates for USD (default)");
+Logger.info("	GET /v1/stocks/rates/:asset - Stock rates for specified asset");
