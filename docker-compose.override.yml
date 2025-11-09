@@ -7,7 +7,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - METALS_DEV_API_KEY
+      - WISE_API_KEY
       - UPDATE_INTERVAL
       - USE_KRAKEN
       - USE_BINANCE

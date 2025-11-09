@@ -2,16 +2,19 @@ import { CryptoExchange } from "./crypto";
 import { Logger } from "./logger";
 import type { ExchangeRates } from "./types";
 
-interface MetalsDevResponse {
-	status: string;
-	currency: string;
-	unit: string;
-	metals: Record<string, number>;
-	currencies: Record<string, number>;
-	timestamps: {
-		metal: string;
-		currency: string;
-	};
+interface WiseRate {
+	source: string;
+	target: string;
+	rate: number;
+	time: string;
+}
+
+interface GoldAPIResponse {
+	name: string;
+	price: number;
+	symbol: string;
+	updatedAt: string;
+	updatedAtReadable: string;
 }
 
 export class Exchange {
@@ -30,15 +33,26 @@ export class Exchange {
 	private updateInterval: number = parseInt(process.env.UPDATE_INTERVAL || "60") || 60;
 
 	private intervalId: NodeJS.Timeout | null = null;
-	private apiKey: string;
+	private wiseApiKey: string;
 	private baseCurrency: string = "USD";
 	private cryptoExchange: CryptoExchange;
 
+	// Metal symbols mapping
+	private metalSymbols = ["XAU", "XAG", "XPD", "HG"];
+	private metalMapping: { [key: string]: string } = {
+		XAU: "GOLD",
+		XAG: "SILVER",
+		XPD: "PALLADIUM",
+		HG: "COPPER",
+	};
+
 	constructor() {
-		this.apiKey = process.env.METALS_DEV_API_KEY || "";
-		if (!this.apiKey) {
-			throw new Error("METALS_DEV_API_KEY is required in environment variables");
+		this.wiseApiKey = process.env.WISE_API_KEY || "";
+
+		if (!this.wiseApiKey) {
+			throw new Error("WISE_API_KEY is required in environment variables");
 		}
+
 		this.cryptoExchange = new CryptoExchange();
 	}
 
@@ -50,60 +64,145 @@ export class Exchange {
 
 	async updateRates(): Promise<void> {
 		try {
-			const response = await fetch(`https://api.metals.dev/v1/latest?api_key=${this.apiKey}&currency=${this.baseCurrency}&unit=g`, {
-				signal: AbortSignal.timeout(5000),
-			});
-
-			if (!response.ok) {
-				throw new Error(`HTTP error! status: ${response.status}`);
-			}
-
-			const data = (await response.json()) as MetalsDevResponse;
-
-			if (data.status !== "success") {
-				throw new Error(`API returned non-success status: ${data.status}`);
-			}
-
-			await this.updateForexRates(data);
+			await this.updateForexRates();
+			await this.updateMetalRates();
 			await this.updateCryptoRates();
 			this.lastUpdate = new Date();
 		} catch (err: any) {
 			Logger.error("[Exchange] Failed to update exchange rates:", err);
-			throw err; // Re-throw on initialization to prevent server start with no data
+			throw err;
 		}
 	}
 
-	private async updateForexRates(data: MetalsDevResponse): Promise<void> {
-		// Metals
-		const filteredMetals: Record<string, number> = {};
-		const metals: Set<string> = new Set();
-		for (const [metal, rate] of Object.entries(data.metals)) {
-			if (!metal.includes("_")) {
-				const metalUpper = metal.toUpperCase();
-				filteredMetals[metalUpper] = rate;
-				metals.add(metalUpper);
+	private async updateForexRates(): Promise<void> {
+		try {
+			const response = await fetch(`https://api.wise.com/v1/rates?source=${this.baseCurrency}`, {
+				signal: AbortSignal.timeout(5000),
+				headers: {
+					Authorization: `Bearer ${this.wiseApiKey}`,
+					"Content-Type": "application/json",
+				},
+			});
+
+			if (!response.ok) {
+				throw new Error(`Wise API HTTP error! status: ${response.status}`);
 			}
+
+			const data = (await response.json()) as WiseRate[];
+
+			const currencies: Set<string> = new Set();
+			currencies.add(this.baseCurrency);
+
+			// Build USD base rates
+			const usdBaseRates: Record<string, number> = {
+				[this.baseCurrency]: 1,
+			};
+
+			for (const rate of data) {
+				if (rate.source === this.baseCurrency && rate.target !== this.baseCurrency) {
+					usdBaseRates[rate.target] = rate.rate;
+					currencies.add(rate.target);
+				}
+			}
+
+			this.currencies = currencies;
+			this.lastCurrencyUpdate = new Date();
+
+			const forexAssets = Array.from(currencies);
+			this.forexRates = this.buildRateMatrix(usdBaseRates, forexAssets);
+
+			Logger.debug(`[Exchange] Forex rates updated for ${forexAssets.length} currencies.`);
+		} catch (err: any) {
+			Logger.error("[Exchange] Failed to fetch forex rates:", err);
+			throw err;
 		}
-		this.metals = metals;
-		this.lastMetalUpdate = new Date(data.timestamps.metal);
+	}
 
-		// Currencies
-		const currencies: Set<string> = new Set();
-		for (const currency of Object.keys(data.currencies)) {
-			currencies.add(currency);
+	private async updateMetalRates(): Promise<void> {
+		try {
+			const metalPrices = await this.fetchMetalPrices();
+
+			const metals: Set<string> = new Set();
+			const usdBaseRates: Record<string, number> = { ...(this.forexRates[this.baseCurrency] || {}) };
+
+			for (const [symbol, price] of Object.entries(metalPrices)) {
+				if (price > 0) {
+					// Convert (price per ounce or price per pound) to price per gram
+					const pricePerGram = symbol === "HG" ? price / 453.59237 : price / 28.349523125;
+					const metalCode = this.metalMapping[symbol];
+					if (metalCode) {
+						usdBaseRates[metalCode] = pricePerGram;
+						metals.add(metalCode);
+					}
+				}
+			}
+
+			this.metals = metals;
+			this.lastMetalUpdate = new Date();
+
+			// Update forex rates to include metals
+			const allAssets = [...Array.from(this.currencies), ...Array.from(metals)];
+			this.forexRates = this.buildRateMatrix(usdBaseRates, allAssets);
+
+			Logger.debug(`[Exchange] Metal rates updated for ${metals.size} metals.`);
+		} catch (err: any) {
+			Logger.error("[Exchange] Failed to fetch metal rates:", err);
+			// Don't throw - metals are secondary, continue with forex rates only
 		}
-		this.currencies = currencies;
-		this.lastCurrencyUpdate = new Date(data.timestamps.currency);
+	}
 
-		const usdBaseRates: Record<string, number> = {
-			...data.currencies,
-			...filteredMetals,
-		};
+	private async fetchMetalPrices(): Promise<{ [symbol: string]: number }> {
+		const metalPrices: { [symbol: string]: number } = {};
+		const promises = [];
 
-		const forexAssets = Object.keys(usdBaseRates);
-		this.forexRates = this.buildRateMatrix(usdBaseRates, forexAssets);
+		// Fetch all metal prices in parallel
+		for (const symbol of this.metalSymbols) {
+			promises.push(this.fetchSingleMetalPrice(symbol));
+		}
 
-		Logger.debug(`[Exchange] Forex rates updated for ${forexAssets.length} assets.`);
+		try {
+			const results = await Promise.allSettled(promises);
+
+			for (let i = 0; i < results.length; i++) {
+				const result = results[i]!;
+				const symbol = this.metalSymbols[i]!;
+
+				if (result.status === "fulfilled" && result.value !== null) {
+					metalPrices[symbol] = result.value;
+				} else {
+					Logger.warn(`[Exchange] Failed to fetch price for ${symbol}`);
+					metalPrices[symbol] = 0; // Mark as failed
+				}
+			}
+		} catch (err: any) {
+			Logger.error("[Exchange] Error fetching metal prices:", err);
+		}
+
+		return metalPrices;
+	}
+
+	private async fetchSingleMetalPrice(symbol: string): Promise<number | null> {
+		try {
+			const response = await fetch(`https://api.gold-api.com/price/${symbol}`, {
+				signal: AbortSignal.timeout(5000),
+			});
+
+			if (!response.ok) {
+				throw new Error(`Gold-API HTTP error for ${symbol}! status: ${response.status}`);
+			}
+
+			const data = (await response.json()) as GoldAPIResponse;
+
+			if (data.price && data.price > 0) {
+				Logger.silly(`[Exchange] ${symbol} price: ${data.price}`);
+				return data.price;
+			} else {
+				throw new Error(`Invalid price for ${symbol}: ${data.price}`);
+			}
+		} catch (err: any) {
+			Logger.error(`[Exchange] Failed to fetch ${symbol} price:`, err.message);
+			return null;
+		}
 	}
 
 	private async updateCryptoRates(): Promise<void> {
@@ -132,11 +231,13 @@ export class Exchange {
 				}
 
 				if (from === this.baseCurrency) {
-					rates[from][to] = this.roundRate(1 / usdBaseRates[to]!);
+					rates[from][to] = this.roundRate(1 / (usdBaseRates[to] || 1));
 				} else if (to === this.baseCurrency) {
-					rates[from][to] = this.roundRate(usdBaseRates[from]!);
+					rates[from][to] = this.roundRate(usdBaseRates[from] || 1);
 				} else {
-					rates[from][to] = this.roundRate(usdBaseRates[from]! / usdBaseRates[to]!);
+					const fromToUsd = usdBaseRates[from] || 1;
+					const toToUsd = usdBaseRates[to] || 1;
+					rates[from][to] = this.roundRate(fromToUsd / toToUsd);
 				}
 			}
 		}
@@ -202,7 +303,6 @@ export class Exchange {
 				await this.updateRates();
 			} catch (err: any) {
 				Logger.error("[Exchange] Failed to update exchange rates during periodic update:", err);
-				// Don't throw here - keep using cached rates
 			}
 		}, this.updateInterval * 1000);
 	}
@@ -212,6 +312,7 @@ export class Exchange {
 			clearInterval(this.intervalId);
 			this.intervalId = null;
 		}
+		this.cryptoExchange.stop();
 	}
 
 	convertForex(amount: number, from: string, to: string): number | undefined {
@@ -295,21 +396,21 @@ export class Exchange {
 
 	private roundRate(rate: number): number {
 		if (rate >= 1) {
-			return Math.round(rate * 10000) / 10000; // 4 decimals for rates >= 1
+			return Math.round(rate * 10000) / 10000;
 		} else if (rate >= 0.1) {
-			return Math.round(rate * 100000) / 100000; // 5 decimals for rates 0.1-1
+			return Math.round(rate * 100000) / 100000;
 		} else if (rate >= 0.01) {
-			return Math.round(rate * 1000000) / 1000000; // 6 decimals for rates 0.01-0.1
+			return Math.round(rate * 1000000) / 1000000;
 		} else if (rate >= 0.001) {
-			return Math.round(rate * 10000000) / 10000000; // 7 decimals for rates 0.001-0.01
+			return Math.round(rate * 10000000) / 10000000;
 		} else if (rate >= 0.0001) {
-			return Math.round(rate * 100000000) / 100000000; // 8 decimals for rates 0.0001-0.001
+			return Math.round(rate * 100000000) / 100000000;
 		} else if (rate >= 0.00001) {
-			return Math.round(rate * 1000000000) / 1000000000; // 9 decimals for rates 0.00001-0.0001
+			return Math.round(rate * 1000000000) / 1000000000;
 		} else if (rate >= 0.000001) {
-			return Math.round(rate * 10000000000) / 10000000000; // 10 decimals for rates 0.000001-0.00001
+			return Math.round(rate * 10000000000) / 10000000000;
 		} else {
-			return rate; // No rounding for very small rates
+			return rate;
 		}
 	}
 }

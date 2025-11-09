@@ -8,8 +8,8 @@ A high-performance foreign exchange (Forex), precious metals, and cryptocurrency
 - 💱 Real-time Forex Data - Automatically updates exchange rates at configurable intervals
 - ₿ Cryptocurrency Support - Real-time crypto prices from multiple exchanges (Binance, Kraken, Gate, KuCoin, BingX, ByBit, Crypto.com, Bitfinex)
 - 🌍 Multi-currency Support - Convert between 150+ currencies with accurate cross-rates
-- 🥇 Precious & Base Metals - Gold, Silver, Platinum, Palladium, Copper, Aluminum, Lead, Nickel, Zinc
-- 📊 Metals.dev Data - Reliable source for both currency exchange rates and metal prices
+- 🥇 Metals - Gold, Silver, Palladium, Copper
+- 📊 Wise - Reliable source for exchange rates
 - 🔄 Smart Price Aggregation - Combines multiple crypto exchanges for optimal pricing with outlier detection
 - 🐳 Docker Ready - Easy deployment with Docker and Docker Compose
 - 🏥 Health Checks - Built-in monitoring and health endpoints
@@ -31,13 +31,13 @@ Create a `.env` file in your project root:
 SERVER_HOST="0.0.0.0"
 SERVER_PORT=3000
 
-# Metals.dev API Configuration
-# Get your API key from https://metals.dev
-# Required for fetching exchange rates
-METALS_DEV_API_KEY="your_api_key_here"
+# Wise API Configuration
+# Get your API key from https://wise.com (Read Only)
+# Required for fetching forex rates
+WISE_API_KEY="your_wise_api_key_here"
 
 # Update Interval (in seconds)
-# How often to fetch new exchange rates from Metals.dev API
+# How often to fetch new exchange rates from Wise API
 # Default: 60 (1 minute)
 UPDATE_INTERVAL=60
 
@@ -86,7 +86,7 @@ docker-compose up -d
 docker run -d \
   --name rabbitforexapi \
   -p 3000:3000 \
-	-e METALS_DEV_API_KEY="your_api_key_here" \
+	-e WISE_API_KEY="your_api_key_here" \
   -e UPDATE_INTERVAL=60 \
 	-e CRYPTO_UPDATE_INTERVAL=30 \
 	-e ENABLED_CRYPTOS="BTC,ETH,SOL,ADA,XRP" \
@@ -104,13 +104,13 @@ Health Check and Statistics
 ```json
 {
 	"program": "RabbitForexAPI",
-	"version": "3.0.1",
+	"version": "3.1.0",
 	"sourceCode": "https://github.com/Rabbit-Company/RabbitForexAPI",
 	"monitorStats": {
-		"currencyCount": 174,
-		"metalCount": 9,
+		"currencyCount": 162,
+		"metalCount": 4,
 		"cryptoCount": 2885,
-		"totalAssetCount": 3068,
+		"totalAssetCount": 3051,
 		"updateInterval": "60s"
 	},
 	"httpStats": {
@@ -271,7 +271,7 @@ Get lists of all supported currencies, metals and cryptocurrencies
 ```json
 {
 	"currencies": ["AED", "AFN", "ALL", "AMD", "ANG", "AOA", "ARS", "AUD", "EUR", "USD", "GBP", "JPY", "CHF", "CAD", "..."],
-	"metals": ["ALUMINUM", "COPPER", "GOLD", "LEAD", "NICKEL", "PALLADIUM", "PLATINUM", "SILVER", "ZINC"],
+	"metals": ["GOLD", "SILVER", "PALLADIUM", "COPPER"],
 	"cryptocurrencies": ["BTC", "ETH", "SOL", "ADA", "XRP", "DOT", "DOGE", "AVAX", "LINK", "..."],
 	"timestamps": {
 		"currency": "2025-11-07T07:06:10.544Z",
@@ -299,20 +299,10 @@ The API supports 150+ currencies, including:
 
 ### Metals (9)
 
-**Precious Metals**:
-
 - **GOLD** - Gold (per gram)
 - **SILVER** - Silver (per gram)
-- **PLATINUM** - Platinum (per gram)
 - **PALLADIUM** - Palladium (per gram)
-
-**Base Metals**:
-
 - **COPPER** - Copper (per gram)
-- **ALUMINUM** - Aluminum (per gram)
-- **LEAD** - Lead (per gram)
-- **NICKEL** - Nickel (per gram)
-- **ZINC** - Zinc (per gram)
 
 ### Cryptocurrencies (2500+)
 
@@ -331,10 +321,10 @@ The API supports 2500+ major cryptocurrencies, including:
 
 ### Forex & Metals Rates
 
-Exchange rates are calculated using USD as the reference currency from metals.dev data:
+Exchange rates are calculated using USD as the reference currency from Wise data:
 
-- **USD to X**: Inverse of metals.dev rate (1 / rate)
-- **X to USD**: Direct rate from metals.dev
+- **USD to X**: Inverse of Wise rate (1 / rate)
+- **X to USD**: Direct rate from Wise
 - **X to Y**: Cross-rate calculation (USD/X ÷ USD/Y)
 
 Rates are rounded intelligently based on their magnitude:

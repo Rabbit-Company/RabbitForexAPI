@@ -221,11 +221,11 @@ export const openapi = {
 				properties: {
 					currencyCount: {
 						type: "integer",
-						example: 174,
+						example: 162,
 					},
 					metalCount: {
 						type: "integer",
-						example: 9,
+						example: 4,
 					},
 					cryptoCount: {
 						type: "integer",
@@ -233,7 +233,7 @@ export const openapi = {
 					},
 					totalAssetCount: {
 						type: "integer",
-						example: 3068,
+						example: 3051,
 					},
 					updateInterval: {
 						type: "string",
