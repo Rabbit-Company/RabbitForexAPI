@@ -389,6 +389,7 @@ Get lists of all supported currencies, metals and cryptocurrencies
 	"currencies": ["AED", "AFN", "ALL", "AMD", "ANG", "AOA", "ARS", "AUD", "EUR", "USD", "GBP", "JPY", "CHF", "CAD", "..."],
 	"metals": ["GOLD", "SILVER", "PALLADIUM", "COPPER"],
 	"cryptocurrencies": ["BTC", "ETH", "SOL", "ADA", "XRP", "DOT", "DOGE", "AVAX", "LINK", "..."],
+	"stocks": ["VOW3d", "NET", "MSFT", "ASMLa", "V", "UBNT", "SMSDl", "FB"],
 	"timestamps": {
 		"currency": "2025-11-07T07:06:10.544Z",
 		"metal": "2025-11-07T07:06:07.016Z",
