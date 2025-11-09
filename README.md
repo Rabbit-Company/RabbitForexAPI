@@ -97,13 +97,13 @@ docker-compose up -d
 docker run -d \
   --name rabbitforexapi \
   -p 3000:3000 \
-	-e WISE_API_KEY="your_wise_api_key_here" \
+  -e WISE_API_KEY="your_wise_api_key_here" \
   -e UPDATE_INTERVAL=30 \
-	-e TRADING212_API_KEY="your_trading212_api_key_here" \
+  -e TRADING212_API_KEY="your_trading212_api_key_here" \
   -e TRADING212_API_SECRET="your_trading212_api_secret_here" \
   -e STOCK_UPDATE_INTERVAL=30 \
-	-e CRYPTO_UPDATE_INTERVAL=30 \
-	-e ENABLED_CRYPTOS="BTC,ETH,SOL,ADA,XRP" \
+  -e CRYPTO_UPDATE_INTERVAL=30 \
+  -e ENABLED_CRYPTOS="BTC,ETH,SOL,ADA,XRP" \
   -e LOGGER_LEVEL=3 \
   -e PROXY=direct \
   rabbitcompany/rabbitforexapi:latest
@@ -389,7 +389,7 @@ Get lists of all supported currencies, metals and cryptocurrencies
 	"currencies": ["AED", "AFN", "ALL", "AMD", "ANG", "AOA", "ARS", "AUD", "EUR", "USD", "GBP", "JPY", "CHF", "CAD", "..."],
 	"metals": ["GOLD", "SILVER", "PALLADIUM", "COPPER"],
 	"cryptocurrencies": ["BTC", "ETH", "SOL", "ADA", "XRP", "DOT", "DOGE", "AVAX", "LINK", "..."],
-	"stocks": ["VOW3d", "NET", "MSFT", "ASMLa", "V", "UBNT", "SMSDl", "FB"],
+	"stocks": ["VOW3d", "NET", "MSFT", "ASMLa", "V", "UBNT", "SMSDl", "FB", "..."],
 	"timestamps": {
 		"currency": "2025-11-07T07:06:10.544Z",
 		"metal": "2025-11-07T07:06:07.016Z",
