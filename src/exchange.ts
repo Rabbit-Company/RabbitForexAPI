@@ -96,7 +96,7 @@ export class Exchange {
 
 			for (const rate of data) {
 				if (rate.source === this.baseCurrency && rate.target !== this.baseCurrency) {
-					usdBaseRates[rate.target] = rate.rate;
+					usdBaseRates[rate.target] = 1 / rate.rate;
 					currencies.add(rate.target);
 				}
 			}
@@ -145,11 +145,11 @@ export class Exchange {
 			for (const forex of forexAssets) {
 				if (forex === "USD") continue;
 
-				// Get forex to USD rate from forex rates
+				// Get USD to forex rate from forex rates
 				const usdToForex = this.forexRates["USD"]?.[forex];
 				if (usdToForex && usdToForex > 0) {
 					// metal -> USD -> forex
-					rates[metal][forex] = this.roundRate(metalPriceUSD / usdToForex);
+					rates[metal][forex] = this.roundRate(metalPriceUSD * usdToForex);
 				}
 			}
 		}
@@ -160,15 +160,18 @@ export class Exchange {
 				rates[forex] = {};
 			}
 
-			const forexToUsd = this.forexRates["USD"]?.[forex];
-			if (forexToUsd && forexToUsd > 0) {
+			// Get USD to forex rate from forex rates
+			const usdToForex = this.forexRates["USD"]?.[forex];
+			if (usdToForex && usdToForex > 0) {
 				for (const metal of metalAssets) {
 					const metalData = metalRates[metal];
 					if (!metalData) continue;
 
 					const metalPriceUSD = metalData.price;
 					// forex -> USD -> metal
-					rates[forex][metal] = this.roundRate(forexToUsd / metalPriceUSD);
+					// If 1 USD = X forex, then 1 forex = 1/X USD
+					// So 1 forex = (1/X) / metalPriceUSD grams of metal
+					rates[forex][metal] = this.roundRate(1 / usdToForex / metalPriceUSD);
 				}
 			}
 		}
@@ -212,15 +215,11 @@ export class Exchange {
 					continue;
 				}
 
-				if (from === this.baseCurrency) {
-					rates[from][to] = this.roundRate(1 / (usdBaseRates[to] || 1));
-				} else if (to === this.baseCurrency) {
-					rates[from][to] = this.roundRate(usdBaseRates[from] || 1);
-				} else {
-					const fromToUsd = usdBaseRates[from] || 1;
-					const toToUsd = usdBaseRates[to] || 1;
-					rates[from][to] = this.roundRate(fromToUsd / toToUsd);
-				}
+				const fromToUsd = from === "USD" ? 1 : usdBaseRates[from] || 1;
+				const toToUsd = to === "USD" ? 1 : usdBaseRates[to] || 1;
+
+				// from -> USD -> to
+				rates[from][to] = this.roundRate(fromToUsd / toToUsd);
 			}
 		}
 
@@ -242,11 +241,11 @@ export class Exchange {
 			for (const forex of forexAssets) {
 				if (forex === "USD") continue;
 
-				// Get forex to USD rate from forex rates
+				// Get USD to forex rate from forex rates
 				const usdToForex = this.forexRates["USD"]?.[forex];
 				if (usdToForex && usdToForex > 0) {
 					// crypto -> USD -> forex
-					rates[crypto][forex] = this.roundRate(cryptoUsdRate / usdToForex);
+					rates[crypto][forex] = this.roundRate(cryptoUsdRate * usdToForex);
 				}
 			}
 		}
@@ -257,12 +256,15 @@ export class Exchange {
 				rates[forex] = {};
 			}
 
-			const forexToUsd = this.forexRates["USD"]?.[forex];
-			if (forexToUsd && forexToUsd > 0) {
+			// Get USD to forex rate from forex rates
+			const usdToForex = this.forexRates["USD"]?.[forex];
+			if (usdToForex && usdToForex > 0) {
 				for (const crypto of cryptoAssets) {
 					const cryptoUsdRate = cryptoRates[crypto]!;
 					// forex -> USD -> crypto
-					rates[forex][crypto] = this.roundRate(forexToUsd / cryptoUsdRate);
+					// If 1 USD = X forex, then 1 forex = 1/X USD
+					// So 1 forex = (1/X) / cryptoUsdRate crypto
+					rates[forex][crypto] = this.roundRate(1 / usdToForex / cryptoUsdRate);
 				}
 			}
 		}
@@ -311,11 +313,11 @@ export class Exchange {
 			for (const forex of forexAssets) {
 				if (forex === stockCurrency) continue;
 
-				// Get forex conversion rate from forex rates
+				// Get stock currency to forex conversion rate from forex rates
 				const currencyToForex = this.forexRates[stockCurrency]?.[forex];
 				if (currencyToForex && currencyToForex > 0) {
 					// stock -> stockCurrency -> forex
-					rates[stock][forex] = this.roundRate(stockPrice / currencyToForex);
+					rates[stock][forex] = this.roundRate(stockPrice * currencyToForex);
 				}
 			}
 		}
@@ -334,10 +336,10 @@ export class Exchange {
 				const stockCurrency = stockData.currency;
 
 				// Get forex to stock's currency rate
-				const currencyToForex = this.forexRates[forex]?.[stockCurrency];
-				if (currencyToForex && currencyToForex > 0) {
+				const forexToCurrency = this.forexRates[forex]?.[stockCurrency];
+				if (forexToCurrency && forexToCurrency > 0) {
 					// forex -> stockCurrency -> stock
-					rates[forex][stock] = this.roundRate(1 / (stockPrice * currencyToForex));
+					rates[forex][stock] = this.roundRate(forexToCurrency / stockPrice);
 				}
 			}
 		}
@@ -365,31 +367,71 @@ export class Exchange {
 		this.metalExchange.stop();
 	}
 
-	convertForex(amount: number, from: string, to: string): number | undefined {
-		const fromRates = this.forexRates[from];
-		if (!fromRates) return undefined;
-		const rate = fromRates[to];
-		if (!rate) return undefined;
-		return amount * rate;
-	}
-
-	convertCrypto(amount: number, from: string, to: string): number | undefined {
-		const fromRates = this.cryptoRates[from];
-		if (!fromRates) return undefined;
-		const rate = fromRates[to];
-		if (!rate) return undefined;
-		return amount * rate;
-	}
-
 	convert(amount: number, from: string, to: string): number | undefined {
-		const fromIsCrypto = this.isCryptocurrency(from);
-		const toIsCrypto = this.isCryptocurrency(to);
+		if (from === to) return amount;
 
-		if (fromIsCrypto || toIsCrypto) {
-			return this.convertCrypto(amount, from, to);
+		// Try direct conversion first
+		let rate: number | undefined;
+
+		if (this.isCurrency(from) && this.isCurrency(to)) {
+			rate = this.forexRates[from]?.[to];
+		} else if (this.isMetal(from) && this.isMetal(to)) {
+			rate = this.metalRates[from]?.[to];
+		} else if (this.isCryptocurrency(from) && this.isCryptocurrency(to)) {
+			rate = this.cryptoRates[from]?.[to];
+		} else if (this.isStock(from) && this.isStock(to)) {
+			rate = this.stockRates[from]?.[to];
 		} else {
-			return this.convertForex(amount, from, to);
+			// Cross-asset conversion via USD
+			const fromUsdValue = this.getUsdValue(from);
+			if (fromUsdValue === undefined) return undefined;
+
+			const usdAmount = amount * fromUsdValue;
+			return this.getAssetFromUsd(usdAmount, to);
 		}
+
+		return rate !== undefined ? amount * rate : undefined;
+	}
+
+	private getUsdValue(asset: string): number | undefined {
+		if (asset === "USD") return 1;
+
+		if (this.isCurrency(asset)) {
+			return this.forexRates[asset]?.["USD"];
+		} else if (this.isMetal(asset)) {
+			return this.metalRates[asset]?.["USD"];
+		} else if (this.isCryptocurrency(asset)) {
+			return this.cryptoRates[asset]?.["USD"];
+		} else if (this.isStock(asset)) {
+			const stockData = this.stockExchange.getStocks().stocks[asset];
+			if (!stockData) return undefined;
+			const currencyRate = this.forexRates[stockData.currency]?.["USD"];
+			if (!currencyRate) return undefined;
+			return stockData.price * currencyRate;
+		}
+		return undefined;
+	}
+
+	private getAssetFromUsd(usdAmount: number, toAsset: string): number | undefined {
+		if (toAsset === "USD") return usdAmount;
+
+		if (this.isCurrency(toAsset)) {
+			const rate = this.forexRates["USD"]?.[toAsset];
+			return rate ? usdAmount * rate : undefined;
+		} else if (this.isMetal(toAsset)) {
+			const rate = this.metalRates["USD"]?.[toAsset];
+			return rate ? usdAmount * rate : undefined;
+		} else if (this.isCryptocurrency(toAsset)) {
+			const rate = this.cryptoRates["USD"]?.[toAsset];
+			return rate ? usdAmount * rate : undefined;
+		} else if (this.isStock(toAsset)) {
+			const stockData = this.stockExchange.getStocks().stocks[toAsset];
+			if (!stockData) return undefined;
+			const currencyRate = this.forexRates["USD"]?.[stockData.currency];
+			if (!currencyRate) return undefined;
+			return (usdAmount * currencyRate) / stockData.price;
+		}
+		return undefined;
 	}
 
 	getForexRates(base: string = "USD"): Record<string, number> {
