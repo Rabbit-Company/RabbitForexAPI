@@ -118,7 +118,7 @@ Health Check and Statistics
 ```json
 {
 	"program": "RabbitForexAPI",
-	"version": "4.0.0",
+	"version": "4.0.1",
 	"sourceCode": "https://github.com/Rabbit-Company/RabbitForexAPI",
 	"monitorStats": {
 		"currencyCount": 162,

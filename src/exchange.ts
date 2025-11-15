@@ -146,10 +146,10 @@ export class Exchange {
 				if (forex === "USD") continue;
 
 				// Get forex to USD rate from forex rates
-				const forexToUsd = this.forexRates["USD"]?.[forex];
-				if (forexToUsd && forexToUsd > 0) {
+				const usdToForex = this.forexRates["USD"]?.[forex];
+				if (usdToForex && usdToForex > 0) {
 					// metal -> USD -> forex
-					rates[metal][forex] = this.roundRate(metalPriceUSD * forexToUsd);
+					rates[metal][forex] = this.roundRate(metalPriceUSD / usdToForex);
 				}
 			}
 		}
@@ -243,10 +243,10 @@ export class Exchange {
 				if (forex === "USD") continue;
 
 				// Get forex to USD rate from forex rates
-				const forexToUsd = this.forexRates["USD"]?.[forex];
-				if (forexToUsd && forexToUsd > 0) {
+				const usdToForex = this.forexRates["USD"]?.[forex];
+				if (usdToForex && usdToForex > 0) {
 					// crypto -> USD -> forex
-					rates[crypto][forex] = this.roundRate(cryptoUsdRate * forexToUsd);
+					rates[crypto][forex] = this.roundRate(cryptoUsdRate / usdToForex);
 				}
 			}
 		}
@@ -315,7 +315,7 @@ export class Exchange {
 				const currencyToForex = this.forexRates[stockCurrency]?.[forex];
 				if (currencyToForex && currencyToForex > 0) {
 					// stock -> stockCurrency -> forex
-					rates[stock][forex] = this.roundRate(stockPrice * currencyToForex);
+					rates[stock][forex] = this.roundRate(stockPrice / currencyToForex);
 				}
 			}
 		}
@@ -334,10 +334,10 @@ export class Exchange {
 				const stockCurrency = stockData.currency;
 
 				// Get forex to stock's currency rate
-				const forexToCurrency = this.forexRates[forex]?.[stockCurrency];
-				if (forexToCurrency && forexToCurrency > 0) {
+				const currencyToForex = this.forexRates[forex]?.[stockCurrency];
+				if (currencyToForex && currencyToForex > 0) {
 					// forex -> stockCurrency -> stock
-					rates[forex][stock] = this.roundRate(forexToCurrency / stockPrice);
+					rates[forex][stock] = this.roundRate(1 / (stockPrice * currencyToForex));
 				}
 			}
 		}
