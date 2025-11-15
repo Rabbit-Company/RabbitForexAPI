@@ -53,8 +53,8 @@ export class MetalExchange {
 
 			for (const [symbol, price] of Object.entries(metalPrices)) {
 				if (price > 0) {
-					// Convert (price per ounce or price per pound) to price per gram
-					const pricePerGram = symbol === "HG" ? price / 453.59237 : price / 28.349523125;
+					// Convert (price per troy ounce or price per pound) to price per gram
+					const pricePerGram = symbol === "HG" ? price / 453.59237 : price / 31.1034768;
 					const metalCode = this.metalMapping[symbol];
 					if (metalCode) {
 						newMetals[metalCode] = {
