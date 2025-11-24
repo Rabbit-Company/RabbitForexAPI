@@ -83,6 +83,15 @@ LOGGER_LEVEL=3
 #          "direct" (no proxy/development), "development" (dev with proxy headers)
 # Default: "direct"
 PROXY=direct
+
+# Enable or disable OpenMetrics endpoint
+# Default: false
+OPEN_METRICS_ENABLED=false
+
+# Protect OpenMetrics API endpoint with Bearer authentication
+# Set to "none" to disable authentication (not recommended for production)
+# Default: none
+OPEN_METRICS_AUTH_TOKEN=none
 ```
 
 ### Running with Docker Compose
@@ -118,7 +127,7 @@ Health Check and Statistics
 ```json
 {
 	"program": "RabbitForexAPI",
-	"version": "4.0.3",
+	"version": "4.1.0",
 	"sourceCode": "https://github.com/Rabbit-Company/RabbitForexAPI",
 	"monitorStats": {
 		"currencyCount": 162,
@@ -133,6 +142,28 @@ Health Check and Statistics
 	},
 	"lastUpdate": "2025-11-07T07:07:54.995Z"
 }
+```
+
+### GET `/metrics`
+
+Returns metrics in OpenMetrics format for Prometheus monitoring.
+
+**Authentication**: Protected with Bearer token (configure via `OPEN_METRICS_AUTH_TOKEN` environment variable)
+
+**Response**: OpenMetrics text format
+
+**Example**:
+
+```text
+# TYPE rabbitforex_http_requests counter
+# HELP rabbitforex_http_requests Total HTTP requests
+rabbitforex_http_requests_total 0 1764012335.777
+rabbitforex_http_requests_total{endpoint="/metrics"} 52 1764012466.32
+rabbitforex_http_requests_total{endpoint="/"} 18 1764012414.1
+rabbitforex_http_requests_created 1764012335.777 1764012335.777
+rabbitforex_http_requests_created{endpoint="/metrics"} 1764012396.269 1764012466.32
+rabbitforex_http_requests_created{endpoint="/"} 1764012410.614 1764012414.1
+# EOF
 ```
 
 ### GET `/openapi.json`

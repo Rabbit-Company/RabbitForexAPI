@@ -7,11 +7,14 @@ import { logger } from "@rabbit-company/web-middleware/logger";
 import { cors } from "@rabbit-company/web-middleware/cors";
 import pkg from "../package.json";
 import { openapi } from "./openapi";
+import { httpRequests, registry } from "./metrics";
+import { bearerAuth } from "@rabbit-company/web-middleware/bearer-auth";
 
 const host = process.env.SERVER_HOST || "0.0.0.0";
 const port = parseInt(process.env.SERVER_PORT || "3000") || 3000;
 const proxy = Object.keys(IP_EXTRACTION_PRESETS).includes(process.env.PROXY || "direct") ? (process.env.PROXY as CloudProvider) : "direct";
 const updateInterval = parseInt(process.env.UPDATE_INTERVAL || "30") || 30;
+const openMetricsEnabled = process.env.OPEN_METRICS_ENABLED === "true";
 
 const cacheControl = [
 	"public",
@@ -50,6 +53,8 @@ app.use(
 );
 
 app.get("/", (c) => {
+	httpRequests.labels({ endpoint: "/" }).inc();
+
 	return c.json(
 		{
 			program: "RabbitForexAPI",
@@ -73,11 +78,37 @@ app.get("/", (c) => {
 	);
 });
 
+if (openMetricsEnabled) {
+	app.get(
+		"/metrics",
+		bearerAuth({
+			validate(token) {
+				return token === process.env.OPEN_METRICS_AUTH_TOKEN;
+			},
+			skip() {
+				return process.env.OPEN_METRICS_AUTH_TOKEN === "none";
+			},
+		}),
+		(c) => {
+			httpRequests.labels({ endpoint: "/metrics" }).inc();
+
+			return c.text(registry.metricsText(), 200, {
+				"Content-Type": registry.contentType,
+				"Cache-Control": "no-store",
+			});
+		}
+	);
+}
+
 app.get("/openapi.json", (c) => {
+	httpRequests.labels({ endpoint: "/openapi.json" }).inc();
+
 	return c.json(openapi, 200, { "Cache-Control": "public, max-age=3600 s-maxage=3600 stale-while-revalidate=36000 stale-if-error=31536000" });
 });
 
 app.get("/v1/assets", (c) => {
+	httpRequests.labels({ endpoint: "/v1/assets" }).inc();
+
 	return c.json(
 		{
 			currencies: exchange.getSupportedCurrencies(),
@@ -97,6 +128,8 @@ app.get("/v1/assets", (c) => {
 });
 
 app.get("/v1/rates", (c) => {
+	httpRequests.labels({ endpoint: "/v1/rates" }).inc();
+
 	return c.json(
 		{
 			base: "USD",
@@ -112,6 +145,9 @@ app.get("/v1/rates", (c) => {
 
 app.get("/v1/rates/:base", (c) => {
 	const base = c.params["base"]!.toUpperCase();
+
+	httpRequests.labels({ endpoint: "/v1/rates/:base" }).inc();
+
 	return c.json(
 		{
 			base: base,
@@ -126,6 +162,8 @@ app.get("/v1/rates/:base", (c) => {
 });
 
 app.get("/v1/metals/rates", (c) => {
+	httpRequests.labels({ endpoint: "/v1/metals/rates" }).inc();
+
 	return c.json(
 		{
 			base: "USD",
@@ -143,6 +181,8 @@ app.get("/v1/metals/rates", (c) => {
 app.get("/v1/metals/rates/:base", (c) => {
 	const base = c.params["base"]!.toUpperCase();
 
+	httpRequests.labels({ endpoint: "/v1/metals/rates/:base" }).inc();
+
 	return c.json(
 		{
 			base: base,
@@ -158,6 +198,8 @@ app.get("/v1/metals/rates/:base", (c) => {
 });
 
 app.get("/v1/crypto/rates", (c) => {
+	httpRequests.labels({ endpoint: "/v1/crypto/rates" }).inc();
+
 	return c.json(
 		{
 			base: "USD",
@@ -175,6 +217,8 @@ app.get("/v1/crypto/rates", (c) => {
 app.get("/v1/crypto/rates/:base", (c) => {
 	const base = c.params["base"]!.toUpperCase();
 
+	httpRequests.labels({ endpoint: "/v1/crypto/rates/:base" }).inc();
+
 	return c.json(
 		{
 			base: base,
@@ -190,6 +234,8 @@ app.get("/v1/crypto/rates/:base", (c) => {
 });
 
 app.get("/v1/stocks/rates", (c) => {
+	httpRequests.labels({ endpoint: "/v1/stocks/rates" }).inc();
+
 	return c.json(
 		{
 			base: "USD",
@@ -206,6 +252,8 @@ app.get("/v1/stocks/rates", (c) => {
 
 app.get("/v1/stocks/rates/:base", (c) => {
 	const base = c.params["base"]!.toUpperCase();
+
+	httpRequests.labels({ endpoint: "/v1/stocks/rates/:base" }).inc();
 
 	return c.json(
 		{
@@ -231,6 +279,7 @@ Logger.info(`Server running on http://${host}:${port}`);
 Logger.info(`Exchange rates updates every ${updateInterval}s`);
 Logger.info("Available endpoints:");
 Logger.info("	GET /                       - Health check and stats");
+Logger.info("	GET /metrics                - OpenMetrics format");
 Logger.info("	GET /openapi.json           - OpenAPI specification");
 Logger.info("	GET /v1/assets              - List all supported currencies, metals, stocks and cryptocurrencies");
 Logger.info("	GET /v1/rates               - Exchange rates for USD (default)");

@@ -23,6 +23,8 @@ services:
       - ENABLED_CRYPTOS
       - LOGGER_LEVEL
       - PROXY
+      - OPEN_METRICS_ENABLED
+      - OPEN_METRICS_AUTH_TOKEN
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 10s
