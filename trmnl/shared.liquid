@@ -1,0 +1,162 @@
+{% comment %}
+User base currency (EUR, USD, etc.)
+{% endcomment %}
+{% assign base = trmnl.plugin_settings.custom_fields_values.base_currency | upcase %}
+
+{% comment %}
+User metal unit (troy_ounce, grams)
+{% endcomment %}
+{% assign metal_unit = trmnl.plugin_settings.custom_fields_values.metal_unit %}
+
+{% comment %}
+Currency symbol mapping
+{% endcomment %}
+{% if base == "USD" %}
+  {% assign currency_symbol = "$" %}
+{% elsif base == "EUR" %}
+  {% assign currency_symbol = "€" %}
+{% elsif base == "GBP" %}
+  {% assign currency_symbol = "£" %}
+{% elsif base == "JPY" or base == "CNY" %}
+  {% assign currency_symbol = "¥" %}
+{% elsif base == "UAH" %}
+  {% assign currency_symbol = "₴" %}
+{% elsif base == "INR" %}
+  {% assign currency_symbol = "₹" %}
+{% elsif base == "ILS" %}
+  {% assign currency_symbol = "₪" %}
+{% elsif base == "KRW" %}
+  {% assign currency_symbol = "₩" %}
+{% elsif base == "VND" %}
+  {% assign currency_symbol = "₫" %}
+{% elsif base == "PHP" %}
+  {% assign currency_symbol = "₱" %}
+{% elsif base == "RUB" %}
+  {% assign currency_symbol = "₽" %}
+{% else %}
+  {% assign currency_symbol = "" %}
+{% endif %}
+
+{% comment %}
+Fetch rates
+{% endcomment %}
+{% assign forex = IDX_0 %}
+{% assign metals = IDX_1 %}
+{% assign crypto = IDX_2 %}
+{% assign stocks = IDX_3 %}
+
+{% comment %}
+Collect all symbols from different asset types
+{% endcomment %}
+{% assign all_symbols = "" | split: "" %}
+
+{% comment %}
+Process fiat assets
+{% endcomment %}
+{% assign fiat_assets_string = trmnl.plugin_settings.custom_fields_values.fiat_assets %}
+{% assign fiat_assets = fiat_assets_string | split: ',' %}
+
+{% for symbol in fiat_assets %}
+  {% assign symbol = symbol | strip %}
+  {% if symbol != "" %}
+    {% assign symbol_with_type = symbol | append: ":forex" %}
+    {% assign temp_array = symbol_with_type | split: "|" %}
+    {% assign all_symbols = temp_array | concat: all_symbols %}
+  {% endif %}
+{% endfor %}
+
+{% comment %}
+Process metal assets
+{% endcomment %}
+{% assign metal_assets_string = trmnl.plugin_settings.custom_fields_values.metal_assets %}
+{% assign metal_assets = metal_assets_string | split: ',' %}
+
+{% for symbol in metal_assets %}
+  {% assign symbol = symbol | strip %}
+  {% if symbol != "" %}
+    {% assign symbol_with_type = symbol | append: ":metal" %}
+    {% assign temp_array = symbol_with_type | split: "|" %}
+    {% assign all_symbols = temp_array | concat: all_symbols %}
+  {% endif %}
+{% endfor %}
+
+{% comment %}
+Process crypto assets
+{% endcomment %}
+{% assign crypto_assets_string = trmnl.plugin_settings.custom_fields_values.crypto_assets %}
+{% assign crypto_assets = crypto_assets_string | split: ',' %}
+
+{% for symbol in crypto_assets %}
+  {% assign symbol = symbol | strip %}
+  {% if symbol != "" %}
+    {% assign symbol_with_type = symbol | append: ":crypto" %}
+    {% assign temp_array = symbol_with_type | split: "|" %}
+    {% assign all_symbols = temp_array | concat: all_symbols %}
+  {% endif %}
+{% endfor %}
+
+{% comment %}
+Process stock assets
+{% endcomment %}
+{% assign stock_assets_string = trmnl.plugin_settings.custom_fields_values.stock_assets %}
+{% assign stock_assets = stock_assets_string | split: ',' %}
+
+{% for symbol in stock_assets %}
+  {% assign symbol = symbol | strip %}
+  {% if symbol != "" %}
+    {% assign symbol_with_type = symbol | append: ":stock" %}
+    {% assign temp_array = symbol_with_type | split: "|" %}
+    {% assign all_symbols = temp_array | concat: all_symbols %}
+  {% endif %}
+{% endfor %}
+
+{%- comment -%} Build sortable_str with entries separated by a unique token {%- endcomment -%}
+{% assign sortable_str = "" %}
+
+{% for symbol_with_type in all_symbols %}
+  {% assign parts = symbol_with_type | split: ":" %}
+  {% assign symbol = parts[0] %}
+  {% assign type = parts[1] %}
+  {% assign price = 0 %}
+
+  {% case type %}
+    {% when "forex" %}
+      {% if forex.rates[symbol] %}
+        {% assign price = 1 | divided_by: forex.rates[symbol] %}
+      {% endif %}
+    {% when "metal" %}
+      {% if metals.rates[symbol] %}
+        {% assign price = 1 | divided_by: metals.rates[symbol] %}
+        {% if metal_unit == "troy_ounce" %}
+          {% assign price = price | times: 31.1034768 %}
+        {% endif %}
+      {% endif %}
+    {% when "crypto" %}
+      {% if crypto.rates[symbol] %}
+        {% assign price = 1 | divided_by: crypto.rates[symbol] %}
+      {% endif %}
+    {% when "stock" %}
+      {% if stocks.rates[symbol] %}
+        {% assign price = 1 | divided_by: stocks.rates[symbol] %}
+      {% endif %}
+  {% endcase %}
+
+  {%- comment -%} zero-pad numeric value (multiply to preserve decimals) {%- endcomment -%}
+  {% assign padded_num = price | times: 1000000 | round %}
+  {% assign padded = padded_num | prepend: "000000000000" | slice: -12, 12 %}
+
+  {%- comment -%} entry format: padded|SYMBOL|TYPE|RAWPRICE {%- endcomment -%}
+  {% assign entry = padded | append: "|" | append: symbol | append: "|" | append: type | append: "|" | append: price %}
+
+  {%- comment -%} append to sortable_str using a separator that won't appear in data {%- endcomment -%}
+  {% if sortable_str == "" %}
+    {% assign sortable_str = entry %}
+  {% else %}
+    {% assign sortable_str = sortable_str | append: "§§§" | append: entry %}
+  {% endif %}
+{% endfor %}
+
+{%- comment -%} turn into a real array and sort by padded prefix (lexicographic), then reverse for DESC {%- endcomment -%}
+{% assign sortable = sortable_str | split: "§§§" %}
+{% assign sortable = sortable | sort %}
+{% assign sortable = sortable | reverse %}
