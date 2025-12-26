@@ -1,6 +1,6 @@
 {
 	"name": "Rabbit Forex",
-	"description": "Monitor exchange rates for fiat currencies, precious metals, cryptocurrencies, and stocks.",
+	"description": "Monitor exchange rates for fiat currencies, precious metals, cryptocurrencies and stocks.",
 	"uuid": "rabbitforex@rabbit-company.com",
 	"shell-version": ["47", "48", "49"],
 	"version-name": "1.0.0",
