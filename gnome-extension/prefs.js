@@ -1,0 +1,543 @@
+import Gio from "gi://Gio";
+import Gtk from "gi://Gtk";
+import Adw from "gi://Adw";
+import GLib from "gi://GLib";
+import Soup from "gi://Soup?version=3.0";
+
+import { ExtensionPreferences } from "resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js";
+
+const API_BASE = "https://forex.rabbitmonitor.com/v1";
+const ENDPOINTS = {
+	fiat: `${API_BASE}/rates/USD`,
+	metals: `${API_BASE}/metals/rates/USD`,
+	crypto: `${API_BASE}/crypto/rates/USD`,
+	stocks: `${API_BASE}/stocks/rates/USD`,
+};
+
+const POPULAR_SYMBOLS = {
+	fiat: ["EUR", "GBP", "JPY", "CHF", "CAD", "AUD", "CNY", "INR", "MXN", "BRL"],
+	metals: ["GOLD", "SILVER", "PALLADIUM", "COPPER"],
+	crypto: ["BTC", "ETH", "SOL", "XRP", "ADA", "DOGE", "DOT", "LINK", "AVAX", "MATIC"],
+	stocks: ["AAPL", "GOOGL", "MSFT", "AMZN", "TSLA", "NVDA", "FB", "NFLX", "AMD", "V"],
+};
+
+const COMMON_FIATS = [
+	"AED",
+	"AFN",
+	"ALL",
+	"AMD",
+	"ANG",
+	"AOA",
+	"ARS",
+	"AUD",
+	"AWG",
+	"AZN",
+	"BAM",
+	"BBD",
+	"BDT",
+	"BGN",
+	"BHD",
+	"BIF",
+	"BMD",
+	"BND",
+	"BOB",
+	"BRL",
+	"BSD",
+	"BTN",
+	"BWP",
+	"BYN",
+	"BZD",
+	"CAD",
+	"CDF",
+	"CHF",
+	"CLP",
+	"CNY",
+	"COP",
+	"CRC",
+	"CUC",
+	"CUP",
+	"CVE",
+	"CZK",
+	"DJF",
+	"DKK",
+	"DOP",
+	"DZD",
+	"EGP",
+	"ERN",
+	"ETB",
+	"EUR",
+	"FJD",
+	"FKP",
+	"GBP",
+	"GEL",
+	"GGP",
+	"GHS",
+	"GIP",
+	"GMD",
+	"GNF",
+	"GTQ",
+	"GYD",
+	"HKD",
+	"HNL",
+	"HRK",
+	"HTG",
+	"HUF",
+	"IDR",
+	"ILS",
+	"IMP",
+	"INR",
+	"IQD",
+	"IRR",
+	"ISK",
+	"JEP",
+	"JMD",
+	"JOD",
+	"JPY",
+	"KES",
+	"KGS",
+	"KHR",
+	"KMF",
+	"KPW",
+	"KRW",
+	"KWD",
+	"KYD",
+	"KZT",
+	"LAK",
+	"LBP",
+	"LKR",
+	"LRD",
+	"LSL",
+	"LYD",
+	"MAD",
+	"MDL",
+	"MGA",
+	"MKD",
+	"MMK",
+	"MNT",
+	"MOP",
+	"MRU",
+	"MUR",
+	"MVR",
+	"MWK",
+	"MXN",
+	"MYR",
+	"MZN",
+	"NAD",
+	"NGN",
+	"NIO",
+	"NOK",
+	"NPR",
+	"NZD",
+	"OMR",
+	"PAB",
+	"PEN",
+	"PGK",
+	"PHP",
+	"PKR",
+	"PLN",
+	"PYG",
+	"QAR",
+	"RON",
+	"RSD",
+	"RUB",
+	"RWF",
+	"SAR",
+	"SBD",
+	"SCR",
+	"SDG",
+	"SEK",
+	"SGD",
+	"SHP",
+	"SLE",
+	"SLL",
+	"SOS",
+	"SRD",
+	"STN",
+	"SVC",
+	"SYP",
+	"SZL",
+	"THB",
+	"TJS",
+	"TMT",
+	"TND",
+	"TOP",
+	"TRY",
+	"TTD",
+	"TWD",
+	"TZS",
+	"UAH",
+	"UGX",
+	"USD",
+	"UYU",
+	"UZS",
+	"VEF",
+	"VES",
+	"VND",
+	"VUV",
+	"WST",
+	"XAF",
+	"XCD",
+	"XCG",
+	"XOF",
+	"XPF",
+	"YER",
+	"ZAR",
+	"ZMW",
+	"ZWG",
+	"ZWL",
+];
+
+const CATEGORY_LABELS = {
+	fiat: "Fiat Currencies",
+	metals: "Precious Metals",
+	crypto: "Cryptocurrencies",
+	stocks: "Stocks",
+};
+
+export default class RabbitForexPreferences extends ExtensionPreferences {
+	fillPreferencesWindow(window) {
+		const settings = this.getSettings();
+
+		// General Settings Page
+		const generalPage = new Adw.PreferencesPage({
+			title: "General",
+			icon_name: "preferences-system-symbolic",
+		});
+		window.add(generalPage);
+
+		// Primary Currency Group
+		const currencyGroup = new Adw.PreferencesGroup({
+			title: "Display Currency",
+			description: "Select the primary currency for displaying prices",
+		});
+		generalPage.add(currencyGroup);
+
+		// Primary currency dropdown
+		const currencyModel = new Gtk.StringList();
+		for (const currency of COMMON_FIATS) {
+			currencyModel.append(currency);
+		}
+
+		const currencyRow = new Adw.ComboRow({
+			title: "Primary Currency",
+			subtitle: "Prices will be displayed in this currency",
+			model: currencyModel,
+		});
+
+		// Set current value
+		const currentCurrency = settings.get_string("primary-currency");
+		const currencyIndex = COMMON_FIATS.indexOf(currentCurrency);
+		if (currencyIndex >= 0) {
+			currencyRow.selected = currencyIndex;
+		}
+
+		currencyRow.connect("notify::selected", () => {
+			const selected = COMMON_FIATS[currencyRow.selected];
+			settings.set_string("primary-currency", selected);
+		});
+		currencyGroup.add(currencyRow);
+
+		// Metals Unit Group
+		const metalsGroup = new Adw.PreferencesGroup({
+			title: "Metals Display",
+			description: "Configure how metal prices are displayed",
+		});
+		generalPage.add(metalsGroup);
+
+		// Metals unit dropdown
+		const unitModel = new Gtk.StringList();
+		unitModel.append("Gram");
+		unitModel.append("Troy Ounce");
+
+		const unitRow = new Adw.ComboRow({
+			title: "Weight Unit",
+			subtitle: "Unit for displaying metal prices",
+			model: unitModel,
+		});
+
+		// Set current value
+		const currentUnit = settings.get_string("metals-unit");
+		unitRow.selected = currentUnit === "troy-ounce" ? 1 : 0;
+
+		unitRow.connect("notify::selected", () => {
+			const selected = unitRow.selected === 1 ? "troy-ounce" : "gram";
+			settings.set_string("metals-unit", selected);
+		});
+		metalsGroup.add(unitRow);
+
+		// Update Settings Group
+		const updateGroup = new Adw.PreferencesGroup({
+			title: "Update Settings",
+			description: "Configure how often rates are fetched",
+		});
+		generalPage.add(updateGroup);
+
+		// Update interval
+		const intervalRow = new Adw.SpinRow({
+			title: "Update Interval",
+			subtitle: "How often to fetch new rates (in seconds)",
+			adjustment: new Gtk.Adjustment({
+				lower: 10,
+				upper: 3600,
+				step_increment: 10,
+				page_increment: 60,
+				value: settings.get_int("update-interval"),
+			}),
+		});
+		intervalRow.adjustment.connect("value-changed", (adj) => {
+			settings.set_int("update-interval", adj.value);
+		});
+		updateGroup.add(intervalRow);
+
+		// Max panel items
+		const maxPanelRow = new Adw.SpinRow({
+			title: "Max Panel Items",
+			subtitle: "Maximum number of rates to show in the panel",
+			adjustment: new Gtk.Adjustment({
+				lower: 1,
+				upper: 10,
+				step_increment: 1,
+				page_increment: 1,
+				value: settings.get_int("max-panel-items"),
+			}),
+		});
+		maxPanelRow.adjustment.connect("value-changed", (adj) => {
+			settings.set_int("max-panel-items", adj.value);
+		});
+		updateGroup.add(maxPanelRow);
+
+		// Category Pages
+		const categories = ["fiat", "metals", "crypto", "stocks"];
+
+		for (const category of categories) {
+			const page = this._createCategoryPage(category, settings, window);
+			window.add(page);
+		}
+	}
+
+	_createCategoryPage(category, settings, window) {
+		const icons = {
+			fiat: "accessories-calculator-symbolic",
+			metals: "emoji-symbols-symbolic",
+			crypto: "emblem-documents-symbolic",
+			stocks: "view-paged-symbolic",
+		};
+
+		const page = new Adw.PreferencesPage({
+			title: CATEGORY_LABELS[category],
+			icon_name: icons[category],
+		});
+
+		// Watched Symbols Group
+		const watchedGroup = new Adw.PreferencesGroup({
+			title: "Watched Symbols",
+			description: "Symbols to monitor in the dropdown menu",
+		});
+		page.add(watchedGroup);
+
+		// Current watched symbols display
+		const watchedEntry = new Adw.EntryRow({
+			title: "Symbols (comma-separated)",
+		});
+
+		const watched = settings.get_strv(`watched-${category}`);
+		watchedEntry.text = watched.join(", ");
+
+		watchedEntry.connect("changed", () => {
+			const text = watchedEntry.text;
+			const symbols = text
+				.split(",")
+				.map((s) => s.trim().toUpperCase())
+				.filter((s) => s.length > 0);
+			settings.set_strv(`watched-${category}`, symbols);
+		});
+		watchedGroup.add(watchedEntry);
+
+		// Panel Symbols Group
+		const panelGroup = new Adw.PreferencesGroup({
+			title: "Panel Display",
+			description: "Symbols to show in the top panel (subset of watched)",
+		});
+		page.add(panelGroup);
+
+		const panelEntry = new Adw.EntryRow({
+			title: "Panel Symbols (comma-separated)",
+		});
+
+		const panelSymbols = settings.get_strv(`panel-${category}`);
+		panelEntry.text = panelSymbols.join(", ");
+
+		panelEntry.connect("changed", () => {
+			const text = panelEntry.text;
+			const symbols = text
+				.split(",")
+				.map((s) => s.trim().toUpperCase())
+				.filter((s) => s.length > 0);
+			settings.set_strv(`panel-${category}`, symbols);
+		});
+		panelGroup.add(panelEntry);
+
+		// Quick Add Popular Symbols Group
+		const popularGroup = new Adw.PreferencesGroup({
+			title: "Quick Add Popular Symbols",
+			description: "Click to add popular symbols",
+		});
+		page.add(popularGroup);
+
+		// Create a flow box for popular symbol buttons
+		const flowBox = new Gtk.FlowBox({
+			selection_mode: Gtk.SelectionMode.NONE,
+			homogeneous: true,
+			column_spacing: 6,
+			row_spacing: 6,
+			margin_start: 12,
+			margin_end: 12,
+			margin_top: 6,
+			margin_bottom: 6,
+		});
+
+		const popular = POPULAR_SYMBOLS[category] || [];
+		for (const symbol of popular) {
+			const button = new Gtk.Button({
+				label: symbol,
+				css_classes: ["suggested-action"],
+			});
+
+			button.connect("clicked", () => {
+				const currentWatched = settings.get_strv(`watched-${category}`);
+				if (!currentWatched.includes(symbol)) {
+					currentWatched.push(symbol);
+					settings.set_strv(`watched-${category}`, currentWatched);
+					watchedEntry.text = currentWatched.join(", ");
+				}
+			});
+
+			flowBox.append(button);
+		}
+
+		const flowBoxRow = new Adw.ActionRow();
+		flowBoxRow.set_child(flowBox);
+		popularGroup.add(flowBoxRow);
+
+		// Fetch Available Symbols Group
+		const fetchGroup = new Adw.PreferencesGroup({
+			title: "Available Symbols",
+			description: "Fetch all available symbols from the API",
+		});
+		page.add(fetchGroup);
+
+		const fetchRow = new Adw.ActionRow({
+			title: "Fetch Available Symbols",
+			subtitle: "Load all symbols from the server",
+		});
+
+		const fetchButton = new Gtk.Button({
+			label: "Fetch",
+			valign: Gtk.Align.CENTER,
+			css_classes: ["suggested-action"],
+		});
+
+		const spinner = new Gtk.Spinner({
+			valign: Gtk.Align.CENTER,
+			visible: false,
+		});
+
+		fetchRow.add_suffix(spinner);
+		fetchRow.add_suffix(fetchButton);
+		fetchGroup.add(fetchRow);
+
+		// Available symbols list (expandable)
+		const availableExpander = new Adw.ExpanderRow({
+			title: "Available Symbols",
+			subtitle: 'Click "Fetch" to load symbols',
+		});
+		fetchGroup.add(availableExpander);
+
+		// Store reference to clear rows later
+		let symbolRows = [];
+
+		fetchButton.connect("clicked", async () => {
+			fetchButton.sensitive = false;
+			spinner.visible = true;
+			spinner.spinning = true;
+
+			try {
+				const symbols = await this._fetchAvailableSymbols(category);
+
+				// Clear ALL existing rows first
+				for (const row of symbolRows) {
+					try {
+						availableExpander.remove(row);
+					} catch (e) {
+						// Row might already be removed
+					}
+				}
+				symbolRows = [];
+
+				const displaySymbols = symbols;
+				for (const symbol of displaySymbols) {
+					const symbolRow = new Adw.ActionRow({
+						title: symbol,
+					});
+
+					const addButton = new Gtk.Button({
+						icon_name: "list-add-symbolic",
+						valign: Gtk.Align.CENTER,
+						css_classes: ["flat"],
+					});
+
+					addButton.connect("clicked", () => {
+						const currentWatched = settings.get_strv(`watched-${category}`);
+						if (!currentWatched.includes(symbol)) {
+							currentWatched.push(symbol);
+							settings.set_strv(`watched-${category}`, currentWatched);
+							watchedEntry.text = currentWatched.join(", ");
+						}
+					});
+
+					symbolRow.add_suffix(addButton);
+					availableExpander.add_row(symbolRow);
+					symbolRows.push(symbolRow);
+				}
+
+				availableExpander.subtitle = `${symbols.length} symbols available`;
+			} catch (error) {
+				availableExpander.subtitle = `Error: ${error.message}`;
+				console.error("Rabbit Forex Prefs: Error fetching symbols:", error);
+			}
+
+			spinner.spinning = false;
+			spinner.visible = false;
+			fetchButton.sensitive = true;
+		});
+
+		return page;
+	}
+
+	async _fetchAvailableSymbols(category) {
+		const url = ENDPOINTS[category];
+		const session = new Soup.Session();
+		const message = Soup.Message.new("GET", url);
+
+		const bytes = await new Promise((resolve, reject) => {
+			session.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
+				try {
+					const bytes = session.send_and_read_finish(result);
+					resolve(bytes);
+				} catch (e) {
+					reject(e);
+				}
+			});
+		});
+
+		if (message.status_code !== 200) {
+			throw new Error(`HTTP ${message.status_code}`);
+		}
+
+		const decoder = new TextDecoder("utf-8");
+		const text = decoder.decode(bytes.get_data());
+		const data = JSON.parse(text);
+
+		return Object.keys(data.rates).sort();
+	}
+}

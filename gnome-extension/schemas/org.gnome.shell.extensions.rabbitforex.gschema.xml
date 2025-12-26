@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="rabbitforex">
+  <schema id="org.gnome.shell.extensions.rabbitforex"
+          path="/org/gnome/shell/extensions/rabbitforex/">
+
+    <!-- General Settings -->
+    <key name="update-interval" type="i">
+      <default>30</default>
+      <summary>Update interval in seconds</summary>
+      <description>How often to fetch new exchange rates from the API</description>
+    </key>
+
+    <key name="max-panel-items" type="i">
+      <default>3</default>
+      <summary>Maximum panel items</summary>
+      <description>Maximum number of rates to display in the panel</description>
+    </key>
+
+    <key name="primary-currency" type="s">
+      <default>'USD'</default>
+      <summary>Primary currency</summary>
+      <description>The primary fiat currency in which prices should be displayed</description>
+    </key>
+
+    <key name="metals-unit" type="s">
+      <default>'troy-ounce'</default>
+      <summary>Metals unit</summary>
+      <description>Unit for displaying metal prices: gram or troy-ounce</description>
+    </key>
+
+    <!-- Fiat Currency Settings -->
+    <key name="watched-fiat" type="as">
+      <default>['EUR', 'GBP', 'JPY']</default>
+      <summary>Watched fiat currencies</summary>
+      <description>List of fiat currency symbols to monitor</description>
+    </key>
+
+    <key name="panel-fiat" type="as">
+      <default>['EUR']</default>
+      <summary>Panel fiat currencies</summary>
+      <description>Fiat currencies to show in the panel</description>
+    </key>
+
+    <!-- Metals Settings -->
+    <key name="watched-metals" type="as">
+      <default>['GOLD', 'SILVER']</default>
+      <summary>Watched metals</summary>
+      <description>List of metal symbols to monitor</description>
+    </key>
+
+    <key name="panel-metals" type="as">
+      <default>[]</default>
+      <summary>Panel metals</summary>
+      <description>Metals to show in the panel</description>
+    </key>
+
+    <!-- Crypto Settings -->
+    <key name="watched-crypto" type="as">
+      <default>['BTC', 'ETH']</default>
+      <summary>Watched cryptocurrencies</summary>
+      <description>List of cryptocurrency symbols to monitor</description>
+    </key>
+
+    <key name="panel-crypto" type="as">
+      <default>['BTC']</default>
+      <summary>Panel cryptocurrencies</summary>
+      <description>Cryptocurrencies to show in the panel</description>
+    </key>
+
+    <!-- Stocks Settings -->
+    <key name="watched-stocks" type="as">
+      <default>['AAPL', 'GOOGL', 'MSFT']</default>
+      <summary>Watched stocks</summary>
+      <description>List of stock symbols to monitor</description>
+    </key>
+
+    <key name="panel-stocks" type="as">
+      <default>[]</default>
+      <summary>Panel stocks</summary>
+      <description>Stocks to show in the panel</description>
+    </key>
+
+  </schema>
+</schemalist>

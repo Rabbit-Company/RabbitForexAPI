@@ -1,0 +1,9 @@
+{
+	"name": "Rabbit Forex",
+	"description": "Monitor exchange rates for fiat currencies, precious metals, cryptocurrencies, and stocks.",
+	"uuid": "rabbitforex@rabbit-company.com",
+	"version": 1,
+	"shell-version": ["47", "48", "49"],
+	"settings-schema": "org.gnome.shell.extensions.rabbitforex",
+	"url": "https://github.com/RabbitCompany/RabbitForexAPI"
+}
