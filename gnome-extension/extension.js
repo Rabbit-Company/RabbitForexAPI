@@ -1,7 +1,7 @@
 import GObject from "gi://GObject";
 import GLib from "gi://GLib";
 import Gio from "gi://Gio";
-import Soup from "gi://Soup?version=3.0";
+import Soup from "gi://Soup";
 import St from "gi://St";
 import Clutter from "gi://Clutter";
 
@@ -12,6 +12,8 @@ import * as Main from "resource:///org/gnome/shell/ui/main.js";
 
 const API_BASE = "https://forex.rabbitmonitor.com/v1";
 const TROY_OUNCE_TO_GRAM = 31.1034768;
+
+const CATEGORIES = ["fiat", "metals", "crypto", "stocks"];
 
 const CATEGORY_ICONS = {
 	fiat: "💱",
@@ -31,7 +33,6 @@ const RabbitForexIndicator = GObject.registerClass(
 			this._rates = {};
 			this._timestamps = {};
 			this._updateTimeout = null;
-			this._isDestroyed = false;
 
 			// Create the panel button layout
 			this._box = new St.BoxLayout({
@@ -57,8 +58,6 @@ const RabbitForexIndicator = GObject.registerClass(
 
 			this._fetchAllRates();
 			this._startUpdateTimer();
-
-			console.log("Rabbit Forex: Extension initialized");
 		}
 
 		_getEndpoints() {
@@ -71,28 +70,24 @@ const RabbitForexIndicator = GObject.registerClass(
 			};
 		}
 
+		_getWatchedCategory(category) {
+			if (!CATEGORIES.includes(category)) return [];
+
+			return this._settings.get_strv(`watched-${category}`) ?? [];
+		}
+
+		_getPanelCategory(category) {
+			if (!CATEGORIES.includes(category)) return [];
+
+			return this._settings.get_strv(`panel-${category}`) ?? [];
+		}
+
 		_buildMenu() {
-			// Header
-			/*
-			const headerItem = new PopupMenu.PopupMenuItem("🐰 Rabbit Forex", {
-				reactive: false,
-			});
-			this.menu.addMenuItem(headerItem);
-
-			this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-			*/
-
 			// Rates section - will be populated dynamically
 			this._ratesSection = new PopupMenu.PopupMenuSection();
 			this.menu.addMenuItem(this._ratesSection);
 
 			this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-
-			// Last updated timestamp
-			this._timestampItem = new PopupMenu.PopupMenuItem("Last updated: --", {
-				reactive: false,
-			});
-			this.menu.addMenuItem(this._timestampItem);
 
 			// Refresh button
 			const refreshItem = new PopupMenu.PopupMenuItem("🔄 Refresh Now");
@@ -107,6 +102,12 @@ const RabbitForexIndicator = GObject.registerClass(
 				this._extension.openPreferences();
 			});
 			this.menu.addMenuItem(settingsItem);
+
+			// Last updated timestamp
+			this._timestampItem = new PopupMenu.PopupMenuItem("Last updated: --", {
+				reactive: false,
+			});
+			this.menu.addMenuItem(this._timestampItem);
 		}
 
 		_startUpdateTimer() {
@@ -117,46 +118,29 @@ const RabbitForexIndicator = GObject.registerClass(
 
 			const interval = this._settings.get_int("update-interval");
 			this._updateTimeout = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, interval, () => {
-				if (this._isDestroyed) {
-					return GLib.SOURCE_REMOVE;
-				}
 				this._fetchAllRates();
 				return GLib.SOURCE_CONTINUE;
 			});
 		}
 
 		_onSettingsChanged() {
-			if (this._isDestroyed) return;
 			this._startUpdateTimer();
-			// Re-fetch rates when settings change (especially primary currency)
 			this._fetchAllRates();
 		}
 
 		async _fetchAllRates() {
-			if (this._isDestroyed) return;
-
-			const categories = ["fiat", "metals", "crypto", "stocks"];
-
-			for (const category of categories) {
-				if (this._isDestroyed) return;
+			for (const category of CATEGORIES) {
 				if (this._hasWatchedItems(category)) {
 					await this._fetchRates(category);
 				}
 			}
 
-			if (!this._isDestroyed) {
-				this._updateDisplay();
-			}
+			this._updateDisplay();
 		}
 
 		_hasWatchedItems(category) {
-			try {
-				const watched = this._settings.get_strv(`watched-${category}`);
-				return watched && watched.length > 0;
-			} catch (e) {
-				console.error(`Rabbit Forex: Error checking watched-${category}:`, e);
-				return false;
-			}
+			const watched = this._getWatchedCategory(category);
+			return watched.length > 0;
 		}
 
 		async _fetchRates(category) {
@@ -178,7 +162,6 @@ const RabbitForexIndicator = GObject.registerClass(
 				});
 
 				if (message.status_code !== 200) {
-					console.error(`Rabbit Forex: Failed to fetch ${category} rates: HTTP ${message.status_code}`);
 					return;
 				}
 
@@ -189,12 +172,11 @@ const RabbitForexIndicator = GObject.registerClass(
 				this._rates[category] = data.rates;
 				this._timestamps[category] = data.timestamps;
 			} catch (error) {
-				console.error(`Rabbit Forex: Error fetching ${category} rates:`, error.message);
+				// Silently fail - rates will show as N/A
 			}
 		}
 
 		_updateDisplay() {
-			if (this._isDestroyed) return;
 			this._updatePanelLabel();
 			this._updateMenuRates();
 			this._updateTimestamp();
@@ -202,27 +184,21 @@ const RabbitForexIndicator = GObject.registerClass(
 
 		_updatePanelLabel() {
 			const panelItems = [];
-			const categories = ["fiat", "metals", "crypto", "stocks"];
 			const maxPanelItems = this._settings.get_int("max-panel-items");
-			const primaryCurrency = this._settings.get_string("primary-currency");
 
-			for (const category of categories) {
+			for (const category of CATEGORIES) {
 				if (!this._rates[category]) continue;
 
-				try {
-					const showInPanel = this._settings.get_strv(`panel-${category}`);
+				const showInPanel = this._getPanelCategory(category);
 
-					for (const symbol of showInPanel) {
-						if (panelItems.length >= maxPanelItems) break;
+				for (const symbol of showInPanel) {
+					if (panelItems.length >= maxPanelItems) break;
 
-						if (this._rates[category][symbol] !== undefined) {
-							const rate = this._rates[category][symbol];
-							const formattedRate = this._formatPanelRate(rate, category, symbol);
-							panelItems.push(`${symbol}: ${formattedRate}`);
-						}
+					if (this._rates[category][symbol] !== undefined) {
+						const rate = this._rates[category][symbol];
+						const formattedRate = this._formatPanelRate(rate, category, symbol);
+						panelItems.push(`${symbol}: ${formattedRate}`);
 					}
-				} catch (e) {
-					console.error(`Rabbit Forex: Error getting panel-${category}:`, e);
 				}
 			}
 
@@ -236,7 +212,6 @@ const RabbitForexIndicator = GObject.registerClass(
 		_updateMenuRates() {
 			this._ratesSection.removeAll();
 
-			const categories = ["fiat", "metals", "crypto", "stocks"];
 			const categoryLabels = {
 				fiat: "Fiat Currencies",
 				metals: "Precious Metals",
@@ -250,19 +225,14 @@ const RabbitForexIndicator = GObject.registerClass(
 			let hasAnyRates = false;
 
 			// Determine which categories will actually be shown
-			const visibleCategories = categories.filter((category) => {
-				try {
-					const watched = this._settings.get_strv(`watched-${category}`);
-					return watched && watched.length > 0 && this._rates[category];
-				} catch (e) {
-					console.error(`Rabbit Forex: Error getting watched-${category}:`, e);
-					return false;
-				}
+			const visibleCategories = CATEGORIES.filter((category) => {
+				const watched = this._getWatchedCategory(category);
+				return watched.length > 0 && this._rates[category];
 			});
 
 			for (let i = 0; i < visibleCategories.length; i++) {
 				const category = visibleCategories[i];
-				const watched = this._settings.get_strv(`watched-${category}`);
+				const watched = this._getWatchedCategory(category);
 
 				hasAnyRates = true;
 
@@ -313,8 +283,6 @@ const RabbitForexIndicator = GObject.registerClass(
 		}
 
 		_formatPanelRate(rate, category, symbol) {
-			const primaryCurrency = this._settings.get_string("primary-currency");
-
 			if (category === "metals") {
 				let price = 1 / rate;
 				const metalsUnit = this._settings.get_string("metals-unit");
@@ -386,8 +354,6 @@ const RabbitForexIndicator = GObject.registerClass(
 		}
 
 		destroy() {
-			this._isDestroyed = true;
-
 			if (this._updateTimeout) {
 				GLib.source_remove(this._updateTimeout);
 				this._updateTimeout = null;
@@ -398,9 +364,10 @@ const RabbitForexIndicator = GObject.registerClass(
 				this._settingsChangedId = null;
 			}
 
-			this._httpSession = null;
-
-			console.log("Rabbit Forex: Extension destroyed");
+			if (this._httpSession) {
+				this._httpSession.abort();
+				this._httpSession = null;
+			}
 
 			super.destroy();
 		}
@@ -409,18 +376,14 @@ const RabbitForexIndicator = GObject.registerClass(
 
 export default class RabbitForexExtension extends Extension {
 	enable() {
-		console.log("Rabbit Forex: Enabling extension");
 		this._indicator = new RabbitForexIndicator(this);
 		Main.panel.addToStatusArea(this.uuid, this._indicator);
-		console.log("Rabbit Forex: Extension enabled");
 	}
 
 	disable() {
-		console.log("Rabbit Forex: Disabling extension");
 		if (this._indicator) {
 			this._indicator.destroy();
 			this._indicator = null;
 		}
-		console.log("Rabbit Forex: Extension disabled");
 	}
 }

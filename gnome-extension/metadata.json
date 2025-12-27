@@ -1,9 +1,9 @@
 {
 	"name": "Rabbit Forex",
-	"description": "Monitor exchange rates for fiat currencies, precious metals, cryptocurrencies and stocks.",
+	"description": "Monitor exchange rates for fiat currencies, precious metals, cryptocurrencies and stocks.\nClick on any rate to copy it to clipboard.",
 	"uuid": "rabbitforex@rabbit-company.com",
 	"shell-version": ["47", "48", "49"],
-	"version-name": "1.0.0",
+	"version-name": "1.1.0",
 	"settings-schema": "org.gnome.shell.extensions.rabbitforex",
 	"url": "https://github.com/Rabbit-Company/RabbitForexAPI",
 	"donations": {
@@ -14,6 +14,5 @@
 		"liberapay": "RabbitCompany",
 		"opencollective": "rabbit-company",
 		"patreon": "rabbitcompany"
-	},
-	"session-modes": ["user"]
+	}
 }
