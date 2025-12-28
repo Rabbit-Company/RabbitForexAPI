@@ -355,6 +355,8 @@ const RabbitForexIndicator = GObject.registerClass(
 			const panelItems = [];
 			const maxPanelItems = this._settings.get_int("max-panel-items");
 			const showCurrencyInPanel = this._settings.get_boolean("show-currency-in-panel");
+			const panelSeparator = this._settings.get_string("panel-separator");
+			const panelItemTemplate = this._settings.get_string("panel-item-template");
 
 			for (const category of CATEGORIES) {
 				if (!this._rates[category]) continue;
@@ -367,7 +369,8 @@ const RabbitForexIndicator = GObject.registerClass(
 					if (this._rates[category][symbol] !== undefined) {
 						const rate = this._rates[category][symbol];
 						const formattedRate = this._formatPanelRate(rate, category, symbol, showCurrencyInPanel);
-						panelItems.push(`${symbol}: ${formattedRate}`);
+						const panelItem = panelItemTemplate.replace("{symbol}", symbol).replace("{rate}", formattedRate);
+						panelItems.push(panelItem);
 					}
 				}
 			}
@@ -375,7 +378,7 @@ const RabbitForexIndicator = GObject.registerClass(
 			if (panelItems.length === 0) {
 				this._panelLabel.text = "Rabbit Forex";
 			} else {
-				this._panelLabel.text = panelItems.join(" | ");
+				this._panelLabel.text = panelItems.join(panelSeparator);
 			}
 		}
 
@@ -391,6 +394,7 @@ const RabbitForexIndicator = GObject.registerClass(
 
 			const primaryCurrency = this._settings.get_string("primary-currency");
 			const metalsUnit = this._settings.get_string("metals-unit");
+			const menuItemTemplate = this._settings.get_string("menu-item-template");
 
 			let hasAnyRates = false;
 
@@ -424,8 +428,9 @@ const RabbitForexIndicator = GObject.registerClass(
 						const rate = this._rates[category][symbol];
 						const rawPrice = this._getRawPrice(rate, category);
 						const displayRate = this._formatDisplayRate(rate, category, symbol, primaryCurrency);
+						const menuItemText = menuItemTemplate.replace("{symbol}", symbol).replace("{rate}", displayRate);
 
-						const rateItem = new PopupMenu.PopupMenuItem(`    ${symbol}: ${displayRate}`, { reactive: true });
+						const rateItem = new PopupMenu.PopupMenuItem(`    ${menuItemText}`, { reactive: true });
 
 						rateItem.connect("activate", () => {
 							const clipboardText = this._getClipboardText(symbol, rawPrice, displayRate, primaryCurrency, category);
@@ -436,7 +441,8 @@ const RabbitForexIndicator = GObject.registerClass(
 
 						this._ratesSection.addMenuItem(rateItem);
 					} else {
-						const rateItem = new PopupMenu.PopupMenuItem(`    ${symbol}: N/A`, { reactive: false });
+						const menuItemText = menuItemTemplate.replace("{symbol}", symbol).replace("{rate}", "N/A");
+						const rateItem = new PopupMenu.PopupMenuItem(`    ${menuItemText}`, { reactive: false });
 						this._ratesSection.addMenuItem(rateItem);
 					}
 				}
@@ -480,7 +486,8 @@ const RabbitForexIndicator = GObject.registerClass(
 					return this._formatNumber(rawPrice);
 				case "display-format":
 				default:
-					return `${symbol}: ${displayRate}`;
+					const clipboardTemplate = this._settings.get_string("clipboard-template");
+					return clipboardTemplate.replace("{symbol}", symbol).replace("{rate}", displayRate);
 			}
 		}
 

@@ -255,6 +255,94 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		currencyGroup.add(currencyRow);
 
+		// Panel Settings Group
+		const panelGroup = new Adw.PreferencesGroup({
+			title: "Panel Settings",
+			description: "Configure how rates appear in the top panel",
+		});
+		generalPage.add(panelGroup);
+
+		// Max panel items
+		const maxPanelRow = new Adw.SpinRow({
+			title: "Max Panel Items",
+			subtitle: "Maximum number of rates to show in the panel",
+			adjustment: new Gtk.Adjustment({
+				lower: 1,
+				upper: 10,
+				step_increment: 1,
+				page_increment: 1,
+				value: settings.get_int("max-panel-items"),
+			}),
+		});
+		maxPanelRow.adjustment.connect("value-changed", (adj) => {
+			settings.set_int("max-panel-items", adj.value);
+		});
+		panelGroup.add(maxPanelRow);
+
+		// Panel separator
+		const separatorRow = new Adw.EntryRow({
+			title: "Panel Separator",
+		});
+		separatorRow.text = settings.get_string("panel-separator");
+		separatorRow.connect("changed", () => {
+			settings.set_string("panel-separator", separatorRow.text);
+		});
+		panelGroup.add(separatorRow);
+
+		// Panel item template
+		const templateRow = new Adw.EntryRow({
+			title: "Panel Item Template",
+		});
+		templateRow.text = settings.get_string("panel-item-template");
+		templateRow.connect("changed", () => {
+			settings.set_string("panel-item-template", templateRow.text);
+		});
+		panelGroup.add(templateRow);
+
+		// Show currency in panel toggle
+		const showCurrencyInPanelRow = new Adw.SwitchRow({
+			title: "Show Currency in Panel",
+			subtitle: "Display currency symbol/code alongside rates in the panel",
+		});
+		showCurrencyInPanelRow.active = settings.get_boolean("show-currency-in-panel");
+		showCurrencyInPanelRow.connect("notify::active", () => {
+			settings.set_boolean("show-currency-in-panel", showCurrencyInPanelRow.active);
+		});
+		panelGroup.add(showCurrencyInPanelRow);
+
+		// Panel template help text
+		const panelTemplateHelpRow = new Adw.ActionRow({
+			title: "Template Placeholders",
+			subtitle: "Use {symbol} for the symbol name and {rate} for the formatted rate",
+		});
+		panelTemplateHelpRow.sensitive = false;
+		panelGroup.add(panelTemplateHelpRow);
+
+		// Menu Settings Group
+		const menuGroup = new Adw.PreferencesGroup({
+			title: "Menu Settings",
+			description: "Configure how rates appear in the dropdown menu",
+		});
+		generalPage.add(menuGroup);
+
+		// Menu item template
+		const menuTemplateRow = new Adw.EntryRow({
+			title: "Menu Item Template",
+		});
+		menuTemplateRow.text = settings.get_string("menu-item-template");
+		menuTemplateRow.connect("changed", () => {
+			settings.set_string("menu-item-template", menuTemplateRow.text);
+		});
+		menuGroup.add(menuTemplateRow);
+
+		// Menu template help text
+		const menuTemplateHelpRow = new Adw.ActionRow({
+			title: "Template Placeholders",
+			subtitle: "Use {symbol} for the symbol name and {rate} for the formatted rate",
+		});
+		menuTemplateHelpRow.sensitive = false;
+		menuGroup.add(menuTemplateHelpRow);
+
 		// Number Format Group
 		const formatGroup = new Adw.PreferencesGroup({
 			title: "Number Formatting",
@@ -341,17 +429,6 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		symbolsGroup.add(positionRow);
 
-		// Show currency in panel toggle
-		const showCurrencyInPanelRow = new Adw.SwitchRow({
-			title: "Show Currency in Panel",
-			subtitle: "Display currency symbol/code alongside rates in the panel",
-		});
-		showCurrencyInPanelRow.active = settings.get_boolean("show-currency-in-panel");
-		showCurrencyInPanelRow.connect("notify::active", () => {
-			settings.set_boolean("show-currency-in-panel", showCurrencyInPanelRow.active);
-		});
-		symbolsGroup.add(showCurrencyInPanelRow);
-
 		// Clipboard Group
 		const clipboardGroup = new Adw.PreferencesGroup({
 			title: "Clipboard",
@@ -380,6 +457,24 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 			settings.set_string("clipboard-format", selected);
 		});
 		clipboardGroup.add(clipboardRow);
+
+		// Clipboard template
+		const clipboardTemplateRow = new Adw.EntryRow({
+			title: "Clipboard Template",
+		});
+		clipboardTemplateRow.text = settings.get_string("clipboard-template");
+		clipboardTemplateRow.connect("changed", () => {
+			settings.set_string("clipboard-template", clipboardTemplateRow.text);
+		});
+		clipboardGroup.add(clipboardTemplateRow);
+
+		// Clipboard template help text
+		const clipboardTemplateHelpRow = new Adw.ActionRow({
+			title: "Template Placeholders",
+			subtitle: "Used when format is 'As displayed'. Use {symbol} and {rate}.",
+		});
+		clipboardTemplateHelpRow.sensitive = false;
+		clipboardGroup.add(clipboardTemplateHelpRow);
 
 		// Metals Unit Group
 		const metalsGroup = new Adw.PreferencesGroup({
@@ -433,23 +528,6 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		updateGroup.add(intervalRow);
 
-		// Max panel items
-		const maxPanelRow = new Adw.SpinRow({
-			title: "Max Panel Items",
-			subtitle: "Maximum number of rates to show in the panel",
-			adjustment: new Gtk.Adjustment({
-				lower: 1,
-				upper: 10,
-				step_increment: 1,
-				page_increment: 1,
-				value: settings.get_int("max-panel-items"),
-			}),
-		});
-		maxPanelRow.adjustment.connect("value-changed", (adj) => {
-			settings.set_int("max-panel-items", adj.value);
-		});
-		updateGroup.add(maxPanelRow);
-
 		// Category Pages
 		const categories = ["fiat", "metals", "crypto", "stocks"];
 
@@ -498,11 +576,11 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		watchedGroup.add(watchedEntry);
 
 		// Panel Symbols Group
-		const panelGroup = new Adw.PreferencesGroup({
+		const panelSymbolsGroup = new Adw.PreferencesGroup({
 			title: "Panel Display",
 			description: "Symbols to show in the top panel (subset of watched)",
 		});
-		page.add(panelGroup);
+		page.add(panelSymbolsGroup);
 
 		const panelEntry = new Adw.EntryRow({
 			title: "Panel Symbols (comma-separated)",
@@ -519,7 +597,7 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 				.filter((s) => s.length > 0);
 			settings.set_strv(`panel-${category}`, symbols);
 		});
-		panelGroup.add(panelEntry);
+		panelSymbolsGroup.add(panelEntry);
 
 		// Quick Add Popular Symbols Group
 		const popularGroup = new Adw.PreferencesGroup({

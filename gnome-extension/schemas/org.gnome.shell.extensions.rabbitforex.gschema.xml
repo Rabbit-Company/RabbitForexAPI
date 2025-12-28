@@ -10,12 +10,6 @@
       <description>How often to fetch new exchange rates from the API</description>
     </key>
 
-    <key name="max-panel-items" type="i">
-      <default>3</default>
-      <summary>Maximum panel items</summary>
-      <description>Maximum number of rates to display in the panel</description>
-    </key>
-
     <key name="primary-currency" type="s">
       <default>'USD'</default>
       <summary>Primary currency</summary>
@@ -26,6 +20,45 @@
       <default>'troy-ounce'</default>
       <summary>Metals unit</summary>
       <description>Unit for displaying metal prices: gram or troy-ounce</description>
+    </key>
+
+    <!-- Panel Settings -->
+    <key name="max-panel-items" type="i">
+      <default>3</default>
+      <summary>Maximum panel items</summary>
+      <description>Maximum number of rates to display in the panel</description>
+    </key>
+
+    <key name="panel-separator" type="s">
+      <default>' | '</default>
+      <summary>Panel separator</summary>
+      <description>Separator between items in the panel</description>
+    </key>
+
+    <key name="panel-item-template" type="s">
+      <default>'{symbol}: {rate}'</default>
+      <summary>Panel item template</summary>
+      <description>Template for displaying items in the panel. Use {symbol} and {rate} as placeholders.</description>
+    </key>
+
+    <key name="show-currency-in-panel" type="b">
+      <default>true</default>
+      <summary>Show currency in panel</summary>
+      <description>Display the currency symbol or code alongside rates in the panel</description>
+    </key>
+
+    <!-- Menu Settings -->
+    <key name="menu-item-template" type="s">
+      <default>'{symbol}: {rate}'</default>
+      <summary>Menu item template</summary>
+      <description>Template for displaying items in the dropdown menu. Use {symbol} and {rate} as placeholders.</description>
+    </key>
+
+    <!-- Clipboard Settings -->
+    <key name="clipboard-template" type="s">
+      <default>'{symbol}: {rate}'</default>
+      <summary>Clipboard template</summary>
+      <description>Template for copying to clipboard when using display format. Use {symbol} and {rate} as placeholders.</description>
     </key>
 
     <!-- Number Formatting Settings -->
@@ -52,12 +85,6 @@
       <default>'before'</default>
       <summary>Symbol position</summary>
       <description>Where to place the currency symbol: before or after the price</description>
-    </key>
-
-    <key name="show-currency-in-panel" type="b">
-      <default>true</default>
-      <summary>Show currency in panel</summary>
-      <description>Display the currency symbol or code alongside rates in the panel</description>
     </key>
 
     <!-- Clipboard Settings -->
