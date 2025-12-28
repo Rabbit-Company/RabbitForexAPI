@@ -354,6 +354,7 @@ const RabbitForexIndicator = GObject.registerClass(
 		_updatePanelLabel() {
 			const panelItems = [];
 			const maxPanelItems = this._settings.get_int("max-panel-items");
+			const showCurrencyInPanel = this._settings.get_boolean("show-currency-in-panel");
 
 			for (const category of CATEGORIES) {
 				if (!this._rates[category]) continue;
@@ -365,7 +366,7 @@ const RabbitForexIndicator = GObject.registerClass(
 
 					if (this._rates[category][symbol] !== undefined) {
 						const rate = this._rates[category][symbol];
-						const formattedRate = this._formatPanelRate(rate, category, symbol);
+						const formattedRate = this._formatPanelRate(rate, category, symbol, showCurrencyInPanel);
 						panelItems.push(`${symbol}: ${formattedRate}`);
 					}
 				}
@@ -483,27 +484,49 @@ const RabbitForexIndicator = GObject.registerClass(
 			}
 		}
 
-		_formatPanelRate(rate, category, symbol) {
+		_formatPanelRate(rate, category, symbol, showCurrency = false) {
+			let price;
+
 			if (category === "metals") {
-				let price = 1 / rate;
+				price = 1 / rate;
 				const metalsUnit = this._settings.get_string("metals-unit");
 				if (metalsUnit === "troy-ounce") {
 					price = price * TROY_OUNCE_TO_GRAM;
 				}
-				return this._formatNumber(price);
+			} else if (category === "stocks" || category === "crypto") {
+				price = 1 / rate;
+			} else {
+				// fiat
+				price = rate;
 			}
 
-			if (category === "stocks") {
-				const price = 1 / rate;
-				return this._formatNumber(price);
+			const formattedPrice = this._formatNumber(price);
+
+			if (!showCurrency) {
+				return formattedPrice;
 			}
 
-			if (category === "crypto") {
-				const price = 1 / rate;
-				return this._formatNumber(price);
+			// Show currency in panel
+			const primaryCurrency = this._settings.get_string("primary-currency");
+			const currencySymbol = this._getCurrencySymbol(primaryCurrency);
+			const symbolPosition = this._settings.get_string("symbol-position");
+			const useCurrencySymbols = this._settings.get_boolean("use-currency-symbols");
+
+			if (!useCurrencySymbols) {
+				return `${formattedPrice} ${primaryCurrency}`;
 			}
 
-			return this._formatNumber(rate);
+			const isSymbol = CURRENCY_SYMBOLS[primaryCurrency] && CURRENCY_SYMBOLS[primaryCurrency] !== primaryCurrency;
+
+			if (!isSymbol) {
+				return `${formattedPrice} ${primaryCurrency}`;
+			}
+
+			if (symbolPosition === "before") {
+				return `${currencySymbol}${formattedPrice}`;
+			} else {
+				return `${formattedPrice} ${currencySymbol}`;
+			}
 		}
 
 		_formatDisplayRate(rate, category, symbol, primaryCurrency) {

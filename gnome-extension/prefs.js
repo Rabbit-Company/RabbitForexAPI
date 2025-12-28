@@ -341,6 +341,17 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		symbolsGroup.add(positionRow);
 
+		// Show currency in panel toggle
+		const showCurrencyInPanelRow = new Adw.SwitchRow({
+			title: "Show Currency in Panel",
+			subtitle: "Display currency symbol/code alongside rates in the panel",
+		});
+		showCurrencyInPanelRow.active = settings.get_boolean("show-currency-in-panel");
+		showCurrencyInPanelRow.connect("notify::active", () => {
+			settings.set_boolean("show-currency-in-panel", showCurrencyInPanelRow.active);
+		});
+		symbolsGroup.add(showCurrencyInPanelRow);
+
 		// Clipboard Group
 		const clipboardGroup = new Adw.PreferencesGroup({
 			title: "Clipboard",

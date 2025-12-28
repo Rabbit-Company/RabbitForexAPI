@@ -54,6 +54,12 @@
       <description>Where to place the currency symbol: before or after the price</description>
     </key>
 
+    <key name="show-currency-in-panel" type="b">
+      <default>true</default>
+      <summary>Show currency in panel</summary>
+      <description>Display the currency symbol or code alongside rates in the panel</description>
+    </key>
+
     <!-- Clipboard Settings -->
     <key name="clipboard-format" type="s">
       <default>'display-format'</default>

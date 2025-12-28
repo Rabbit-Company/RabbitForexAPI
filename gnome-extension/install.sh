@@ -17,7 +17,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cp "$SCRIPT_DIR/extension.js" "$EXTENSION_DIR/"
 cp "$SCRIPT_DIR/prefs.js" "$EXTENSION_DIR/"
 cp "$SCRIPT_DIR/metadata.json" "$EXTENSION_DIR/"
-cp "$SCRIPT_DIR/stylesheet.css" "$EXTENSION_DIR/"
 cp "$SCRIPT_DIR/schemas/"*.xml "$EXTENSION_DIR/schemas/"
 
 # Compile schemas
