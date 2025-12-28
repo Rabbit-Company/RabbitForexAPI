@@ -194,6 +194,24 @@ const CATEGORY_LABELS = {
 	stocks: "Stocks",
 };
 
+const NUMBER_FORMATS = [
+	{ id: "auto", label: "Auto (smart scaling)" },
+	{ id: "fixed", label: "Fixed decimals" },
+	{ id: "locale", label: "Locale format" },
+	{ id: "compact", label: "Compact (K, M, B)" },
+];
+
+const CLIPBOARD_FORMATS = [
+	{ id: "display-format", label: "As displayed" },
+	{ id: "formatted-price", label: "Formatted price" },
+	{ id: "price-only", label: "Raw price" },
+];
+
+const SYMBOL_POSITIONS = [
+	{ id: "before", label: "Before price ($100)" },
+	{ id: "after", label: "After price (100 $)" },
+];
+
 export default class RabbitForexPreferences extends ExtensionPreferences {
 	fillPreferencesWindow(window) {
 		const settings = this.getSettings();
@@ -236,6 +254,121 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 			settings.set_string("primary-currency", selected);
 		});
 		currencyGroup.add(currencyRow);
+
+		// Number Format Group
+		const formatGroup = new Adw.PreferencesGroup({
+			title: "Number Formatting",
+			description: "Configure how prices are displayed",
+		});
+		generalPage.add(formatGroup);
+
+		// Number format dropdown
+		const formatModel = new Gtk.StringList();
+		for (const format of NUMBER_FORMATS) {
+			formatModel.append(format.label);
+		}
+
+		const formatRow = new Adw.ComboRow({
+			title: "Number Format",
+			subtitle: "How numbers are formatted",
+			model: formatModel,
+		});
+
+		const currentFormat = settings.get_string("number-format");
+		const formatIndex = NUMBER_FORMATS.findIndex((f) => f.id === currentFormat);
+		formatRow.selected = formatIndex >= 0 ? formatIndex : 0;
+
+		formatRow.connect("notify::selected", () => {
+			const selected = NUMBER_FORMATS[formatRow.selected].id;
+			settings.set_string("number-format", selected);
+		});
+		formatGroup.add(formatRow);
+
+		// Decimal places
+		const decimalRow = new Adw.SpinRow({
+			title: "Decimal Places",
+			subtitle: "Number of decimal places to display",
+			adjustment: new Gtk.Adjustment({
+				lower: 0,
+				upper: 10,
+				step_increment: 1,
+				page_increment: 1,
+				value: settings.get_int("decimal-places"),
+			}),
+		});
+		decimalRow.adjustment.connect("value-changed", (adj) => {
+			settings.set_int("decimal-places", adj.value);
+		});
+		formatGroup.add(decimalRow);
+
+		// Currency Symbols Group
+		const symbolsGroup = new Adw.PreferencesGroup({
+			title: "Currency Symbols",
+			description: "Use symbols like €, $, £ instead of currency codes",
+		});
+		generalPage.add(symbolsGroup);
+
+		// Use currency symbols toggle
+		const useSymbolsRow = new Adw.SwitchRow({
+			title: "Use Currency Symbols",
+			subtitle: "Display € instead of EUR, $ instead of USD, etc.",
+		});
+		useSymbolsRow.active = settings.get_boolean("use-currency-symbols");
+		useSymbolsRow.connect("notify::active", () => {
+			settings.set_boolean("use-currency-symbols", useSymbolsRow.active);
+		});
+		symbolsGroup.add(useSymbolsRow);
+
+		// Symbol position dropdown
+		const positionModel = new Gtk.StringList();
+		for (const pos of SYMBOL_POSITIONS) {
+			positionModel.append(pos.label);
+		}
+
+		const positionRow = new Adw.ComboRow({
+			title: "Symbol Position",
+			subtitle: "Where to place the currency symbol",
+			model: positionModel,
+		});
+
+		const currentPosition = settings.get_string("symbol-position");
+		const positionIndex = SYMBOL_POSITIONS.findIndex((p) => p.id === currentPosition);
+		positionRow.selected = positionIndex >= 0 ? positionIndex : 0;
+
+		positionRow.connect("notify::selected", () => {
+			const selected = SYMBOL_POSITIONS[positionRow.selected].id;
+			settings.set_string("symbol-position", selected);
+		});
+		symbolsGroup.add(positionRow);
+
+		// Clipboard Group
+		const clipboardGroup = new Adw.PreferencesGroup({
+			title: "Clipboard",
+			description: "Configure what gets copied when clicking a rate",
+		});
+		generalPage.add(clipboardGroup);
+
+		// Clipboard format dropdown
+		const clipboardModel = new Gtk.StringList();
+		for (const format of CLIPBOARD_FORMATS) {
+			clipboardModel.append(format.label);
+		}
+
+		const clipboardRow = new Adw.ComboRow({
+			title: "Clipboard Format",
+			subtitle: "Format of copied text when clicking a rate",
+			model: clipboardModel,
+		});
+
+		const currentClipboard = settings.get_string("clipboard-format");
+		const clipboardIndex = CLIPBOARD_FORMATS.findIndex((f) => f.id === currentClipboard);
+		clipboardRow.selected = clipboardIndex >= 0 ? clipboardIndex : 0;
+
+		clipboardRow.connect("notify::selected", () => {
+			const selected = CLIPBOARD_FORMATS[clipboardRow.selected].id;
+			settings.set_string("clipboard-format", selected);
+		});
+		clipboardGroup.add(clipboardRow);
 
 		// Metals Unit Group
 		const metalsGroup = new Adw.PreferencesGroup({

@@ -22,6 +22,169 @@ const CATEGORY_ICONS = {
 	stocks: "📈",
 };
 
+const CURRENCY_SYMBOLS = {
+	AED: "د.إ",
+	AFN: "؋",
+	ALL: "L",
+	AMD: "֏",
+	ANG: "ƒ",
+	AOA: "Kz",
+	ARS: "$",
+	AUD: "$",
+	AWG: "ƒ",
+	AZN: "₼",
+	BAM: "KM",
+	BBD: "$",
+	BDT: "৳",
+	BGN: "лв",
+	BHD: ".د.ب",
+	BIF: "FBu",
+	BMD: "$",
+	BND: "$",
+	BOB: "$b",
+	BRL: "R$",
+	BSD: "$",
+	BTN: "Nu.",
+	BWP: "P",
+	BYN: "Br",
+	BZD: "BZ$",
+	CAD: "$",
+	CDF: "FC",
+	CHF: "CHF",
+	CLP: "$",
+	CNY: "¥",
+	COP: "$",
+	CRC: "₡",
+	CUC: "$",
+	CUP: "₱",
+	CVE: "$",
+	CZK: "Kč",
+	DJF: "Fdj",
+	DKK: "kr",
+	DOP: "RD$",
+	DZD: "دج",
+	EGP: "£",
+	ERN: "Nfk",
+	ETB: "Br",
+	EUR: "€",
+	FJD: "$",
+	FKP: "£",
+	GBP: "£",
+	GEL: "₾",
+	GGP: "£",
+	GHS: "GH₵",
+	GIP: "£",
+	GMD: "D",
+	GNF: "FG",
+	GTQ: "Q",
+	GYD: "$",
+	HKD: "$",
+	HNL: "L",
+	HRK: "kn",
+	HTG: "G",
+	HUF: "Ft",
+	IDR: "Rp",
+	ILS: "₪",
+	IMP: "£",
+	INR: "₹",
+	IQD: "ع.د",
+	IRR: "﷼",
+	ISK: "kr",
+	JEP: "£",
+	JMD: "J$",
+	JOD: "JD",
+	JPY: "¥",
+	KES: "KSh",
+	KGS: "лв",
+	KHR: "៛",
+	KMF: "CF",
+	KPW: "₩",
+	KRW: "₩",
+	KWD: "KD",
+	KYD: "$",
+	KZT: "₸",
+	LAK: "₭",
+	LBP: "£",
+	LKR: "₨",
+	LRD: "$",
+	LSL: "M",
+	LYD: "LD",
+	MAD: "MAD",
+	MDL: "lei",
+	MGA: "Ar",
+	MKD: "ден",
+	MMK: "K",
+	MNT: "₮",
+	MOP: "MOP$",
+	MRU: "UM",
+	MUR: "₨",
+	MVR: "Rf",
+	MWK: "MK",
+	MXN: "$",
+	MYR: "RM",
+	MZN: "MT",
+	NAD: "$",
+	NGN: "₦",
+	NIO: "C$",
+	NOK: "kr",
+	NPR: "₨",
+	NZD: "$",
+	OMR: "﷼",
+	PAB: "B/.",
+	PEN: "S/.",
+	PGK: "K",
+	PHP: "₱",
+	PKR: "₨",
+	PLN: "zł",
+	PYG: "Gs",
+	QAR: "﷼",
+	RON: "lei",
+	RSD: "Дин.",
+	RUB: "₽",
+	RWF: "R₣",
+	SAR: "﷼",
+	SBD: "$",
+	SCR: "₨",
+	SDG: "ج.س.",
+	SEK: "kr",
+	SGD: "S$",
+	SHP: "£",
+	SLL: "Le",
+	SOS: "S",
+	SRD: "$",
+	STN: "Db",
+	SVC: "$",
+	SYP: "£",
+	SZL: "E",
+	THB: "฿",
+	TJS: "SM",
+	TMT: "T",
+	TND: "د.ت",
+	TOP: "T$",
+	TRY: "₺",
+	TTD: "TT$",
+	TWD: "NT$",
+	TZS: "TSh",
+	UAH: "₴",
+	UGX: "USh",
+	USD: "$",
+	UYU: "$U",
+	UZS: "лв",
+	VEF: "Bs",
+	VES: "Bs.S",
+	VND: "₫",
+	VUV: "VT",
+	WST: "WS$",
+	XAF: "FCFA",
+	XCD: "$",
+	XOF: "CFA",
+	XPF: "₣",
+	YER: "﷼",
+	ZAR: "R",
+	ZMW: "ZK",
+	ZWL: "$",
+};
+
 const RabbitForexIndicator = GObject.registerClass(
 	class RabbitForexIndicator extends PanelMenu.Button {
 		_init(extension) {
@@ -80,6 +243,12 @@ const RabbitForexIndicator = GObject.registerClass(
 			if (!CATEGORIES.includes(category)) return [];
 
 			return this._settings.get_strv(`panel-${category}`) ?? [];
+		}
+
+		_getCurrencySymbol(currency) {
+			const useCurrencySymbols = this._settings.get_boolean("use-currency-symbols");
+			if (!useCurrencySymbols) return currency;
+			return CURRENCY_SYMBOLS[currency] || currency;
 		}
 
 		_buildMenu() {
@@ -252,15 +421,16 @@ const RabbitForexIndicator = GObject.registerClass(
 				for (const symbol of watched) {
 					if (this._rates[category][symbol] !== undefined) {
 						const rate = this._rates[category][symbol];
+						const rawPrice = this._getRawPrice(rate, category);
 						const displayRate = this._formatDisplayRate(rate, category, symbol, primaryCurrency);
 
 						const rateItem = new PopupMenu.PopupMenuItem(`    ${symbol}: ${displayRate}`, { reactive: true });
 
-						// Copy to clipboard on click
 						rateItem.connect("activate", () => {
+							const clipboardText = this._getClipboardText(symbol, rawPrice, displayRate, primaryCurrency, category);
 							const clipboard = St.Clipboard.get_default();
-							clipboard.set_text(St.ClipboardType.CLIPBOARD, `${symbol}: ${displayRate}`);
-							Main.notify("Copied to clipboard", `${symbol}: ${displayRate}`);
+							clipboard.set_text(St.ClipboardType.CLIPBOARD, clipboardText);
+							Main.notify("Copied to clipboard", clipboardText);
 						});
 
 						this._ratesSection.addMenuItem(rateItem);
@@ -279,6 +449,37 @@ const RabbitForexIndicator = GObject.registerClass(
 			if (!hasAnyRates) {
 				const noRatesItem = new PopupMenu.PopupMenuItem("No rates configured. Open Settings to add symbols.", { reactive: false });
 				this._ratesSection.addMenuItem(noRatesItem);
+			}
+		}
+
+		_getRawPrice(rate, category) {
+			if (category === "metals") {
+				let price = 1 / rate;
+				const metalsUnit = this._settings.get_string("metals-unit");
+				if (metalsUnit === "troy-ounce") {
+					price = price * TROY_OUNCE_TO_GRAM;
+				}
+				return price;
+			}
+
+			if (category === "stocks" || category === "crypto" || category === "fiat") {
+				return 1 / rate;
+			}
+
+			return rate;
+		}
+
+		_getClipboardText(symbol, rawPrice, displayRate, primaryCurrency, category) {
+			const clipboardFormat = this._settings.get_string("clipboard-format");
+
+			switch (clipboardFormat) {
+				case "price-only":
+					return rawPrice.toString();
+				case "formatted-price":
+					return this._formatNumber(rawPrice);
+				case "display-format":
+				default:
+					return `${symbol}: ${displayRate}`;
 			}
 		}
 
@@ -306,45 +507,93 @@ const RabbitForexIndicator = GObject.registerClass(
 		}
 
 		_formatDisplayRate(rate, category, symbol, primaryCurrency) {
+			const currencySymbol = this._getCurrencySymbol(primaryCurrency);
+			const symbolPosition = this._settings.get_string("symbol-position");
+
 			if (category === "metals") {
 				let price = 1 / rate;
 				const metalsUnit = this._settings.get_string("metals-unit");
 				if (metalsUnit === "troy-ounce") {
 					price = price * TROY_OUNCE_TO_GRAM;
 				}
-				return `${this._formatNumber(price)} ${primaryCurrency}`;
+				return this._formatWithCurrency(price, currencySymbol, primaryCurrency, symbolPosition);
 			}
 
 			if (category === "stocks") {
 				const price = 1 / rate;
-				return `${this._formatNumber(price)} ${primaryCurrency}`;
+				return this._formatWithCurrency(price, currencySymbol, primaryCurrency, symbolPosition);
 			}
 
 			if (category === "fiat") {
 				const price = 1 / rate;
-				return `${this._formatNumber(price)} ${primaryCurrency}`;
+				return this._formatWithCurrency(price, currencySymbol, primaryCurrency, symbolPosition);
 			}
 
 			if (category === "crypto") {
 				const price = 1 / rate;
-				return `${this._formatNumber(price)} ${primaryCurrency}`;
+				return this._formatWithCurrency(price, currencySymbol, primaryCurrency, symbolPosition);
 			}
 
 			return this._formatNumber(rate);
 		}
 
-		_formatNumber(num) {
-			if (num >= 1000000) {
-				return (num / 1000000).toFixed(2) + "M";
-			} else if (num >= 1) {
-				return num.toLocaleString("en-US", { maximumFractionDigits: 2 });
-			} else if (num >= 0.01) {
-				return num.toFixed(4);
-			} else if (num >= 0.0001) {
-				return num.toFixed(6);
-			} else {
-				return num.toExponential(4);
+		_formatWithCurrency(price, currencySymbol, primaryCurrency, position) {
+			const formattedPrice = this._formatNumber(price);
+			const useCurrencySymbols = this._settings.get_boolean("use-currency-symbols");
+
+			if (!useCurrencySymbols) {
+				return `${formattedPrice} ${primaryCurrency}`;
 			}
+
+			const isSymbol = CURRENCY_SYMBOLS[primaryCurrency] && CURRENCY_SYMBOLS[primaryCurrency] !== primaryCurrency;
+
+			if (!isSymbol) {
+				return `${formattedPrice} ${primaryCurrency}`;
+			}
+
+			if (position === "before") {
+				return `${currencySymbol}${formattedPrice}`;
+			} else {
+				return `${formattedPrice} ${currencySymbol}`;
+			}
+		}
+
+		_formatNumber(num) {
+			const formatStyle = this._settings.get_string("number-format");
+			const decimalPlaces = this._settings.get_int("decimal-places");
+
+			if (formatStyle === "auto") {
+				if (num >= 1000000) {
+					return (num / 1000000).toFixed(2) + "M";
+				} else if (num >= 1) {
+					return num.toLocaleString("en-US", { maximumFractionDigits: decimalPlaces });
+				} else if (num >= 0.01) {
+					return num.toFixed(Math.max(decimalPlaces, 4));
+				} else if (num >= 0.0001) {
+					return num.toFixed(Math.max(decimalPlaces, 6));
+				} else {
+					return num.toExponential(4);
+				}
+			} else if (formatStyle === "fixed") {
+				return num.toFixed(decimalPlaces);
+			} else if (formatStyle === "locale") {
+				return num.toLocaleString(undefined, {
+					minimumFractionDigits: decimalPlaces,
+					maximumFractionDigits: decimalPlaces,
+				});
+			} else if (formatStyle === "compact") {
+				if (num >= 1000000000) {
+					return (num / 1000000000).toFixed(decimalPlaces) + "B";
+				} else if (num >= 1000000) {
+					return (num / 1000000).toFixed(decimalPlaces) + "M";
+				} else if (num >= 1000) {
+					return (num / 1000).toFixed(decimalPlaces) + "K";
+				} else {
+					return num.toFixed(decimalPlaces);
+				}
+			}
+
+			return num.toFixed(decimalPlaces);
 		}
 
 		_updateTimestamp() {

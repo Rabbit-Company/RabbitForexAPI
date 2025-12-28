@@ -28,6 +28,39 @@
       <description>Unit for displaying metal prices: gram or troy-ounce</description>
     </key>
 
+    <!-- Number Formatting Settings -->
+    <key name="number-format" type="s">
+      <default>'auto'</default>
+      <summary>Number format style</summary>
+      <description>How numbers are formatted: auto, fixed, locale, or compact</description>
+    </key>
+
+    <key name="decimal-places" type="i">
+      <default>2</default>
+      <summary>Decimal places</summary>
+      <description>Number of decimal places to display (0-10)</description>
+    </key>
+
+    <!-- Currency Symbol Settings -->
+    <key name="use-currency-symbols" type="b">
+      <default>true</default>
+      <summary>Use currency symbols</summary>
+      <description>Use symbols like €, $, £ instead of currency codes</description>
+    </key>
+
+    <key name="symbol-position" type="s">
+      <default>'before'</default>
+      <summary>Symbol position</summary>
+      <description>Where to place the currency symbol: before or after the price</description>
+    </key>
+
+    <!-- Clipboard Settings -->
+    <key name="clipboard-format" type="s">
+      <default>'display-format'</default>
+      <summary>Clipboard format</summary>
+      <description>Format of copied text: display-format, formatted-price or price-only</description>
+    </key>
+
     <!-- Fiat Currency Settings -->
     <key name="watched-fiat" type="as">
       <default>['EUR', 'GBP', 'JPY']</default>
