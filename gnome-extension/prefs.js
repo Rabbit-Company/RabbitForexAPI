@@ -262,6 +262,17 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		generalPage.add(panelGroup);
 
+		// Show currency in panel toggle
+		const showCurrencyInPanelRow = new Adw.SwitchRow({
+			title: "Show Currency in Panel",
+			subtitle: "Display currency symbol/code alongside rates in the panel",
+		});
+		showCurrencyInPanelRow.active = settings.get_boolean("show-currency-in-panel");
+		showCurrencyInPanelRow.connect("notify::active", () => {
+			settings.set_boolean("show-currency-in-panel", showCurrencyInPanelRow.active);
+		});
+		panelGroup.add(showCurrencyInPanelRow);
+
 		// Max panel items
 		const maxPanelRow = new Adw.SpinRow({
 			title: "Max Panel Items",
@@ -298,17 +309,6 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 			settings.set_string("panel-item-template", templateRow.text);
 		});
 		panelGroup.add(templateRow);
-
-		// Show currency in panel toggle
-		const showCurrencyInPanelRow = new Adw.SwitchRow({
-			title: "Show Currency in Panel",
-			subtitle: "Display currency symbol/code alongside rates in the panel",
-		});
-		showCurrencyInPanelRow.active = settings.get_boolean("show-currency-in-panel");
-		showCurrencyInPanelRow.connect("notify::active", () => {
-			settings.set_boolean("show-currency-in-panel", showCurrencyInPanelRow.active);
-		});
-		panelGroup.add(showCurrencyInPanelRow);
 
 		// Panel template help text
 		const panelTemplateHelpRow = new Adw.ActionRow({
@@ -447,6 +447,17 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 			subtitle: "Format of copied text when clicking a rate",
 			model: clipboardModel,
 		});
+
+		// Clipboard notification toggle
+		const clipboardNotificationRow = new Adw.SwitchRow({
+			title: "Show Notification",
+			subtitle: "Display a notification when a rate is copied to clipboard",
+		});
+		clipboardNotificationRow.active = settings.get_boolean("clipboard-notification");
+		clipboardNotificationRow.connect("notify::active", () => {
+			settings.set_boolean("clipboard-notification", clipboardNotificationRow.active);
+		});
+		clipboardGroup.add(clipboardNotificationRow);
 
 		const currentClipboard = settings.get_string("clipboard-format");
 		const clipboardIndex = CLIPBOARD_FORMATS.findIndex((f) => f.id === currentClipboard);

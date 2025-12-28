@@ -23,6 +23,12 @@
     </key>
 
     <!-- Panel Settings -->
+		<key name="show-currency-in-panel" type="b">
+      <default>true</default>
+      <summary>Show currency in panel</summary>
+      <description>Display the currency symbol or code alongside rates in the panel</description>
+    </key>
+
     <key name="max-panel-items" type="i">
       <default>3</default>
       <summary>Maximum panel items</summary>
@@ -41,12 +47,6 @@
       <description>Template for displaying items in the panel. Use {symbol} and {rate} as placeholders.</description>
     </key>
 
-    <key name="show-currency-in-panel" type="b">
-      <default>true</default>
-      <summary>Show currency in panel</summary>
-      <description>Display the currency symbol or code alongside rates in the panel</description>
-    </key>
-
     <!-- Menu Settings -->
     <key name="menu-item-template" type="s">
       <default>'{symbol}: {rate}'</default>
@@ -55,10 +55,22 @@
     </key>
 
     <!-- Clipboard Settings -->
+		<key name="clipboard-notification" type="b">
+      <default>true</default>
+      <summary>Show clipboard notification</summary>
+      <description>Show a notification when a rate is copied to clipboard</description>
+    </key>
+
     <key name="clipboard-template" type="s">
       <default>'{symbol}: {rate}'</default>
       <summary>Clipboard template</summary>
       <description>Template for copying to clipboard when using display format. Use {symbol} and {rate} as placeholders.</description>
+    </key>
+
+    <key name="clipboard-format" type="s">
+      <default>'display-format'</default>
+      <summary>Clipboard format</summary>
+      <description>Format of copied text: display-format, formatted-price or price-only</description>
     </key>
 
     <!-- Number Formatting Settings -->
@@ -85,13 +97,6 @@
       <default>'before'</default>
       <summary>Symbol position</summary>
       <description>Where to place the currency symbol: before or after the price</description>
-    </key>
-
-    <!-- Clipboard Settings -->
-    <key name="clipboard-format" type="s">
-      <default>'display-format'</default>
-      <summary>Clipboard format</summary>
-      <description>Format of copied text: display-format, formatted-price or price-only</description>
     </key>
 
     <!-- Fiat Currency Settings -->

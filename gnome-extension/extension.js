@@ -436,7 +436,9 @@ const RabbitForexIndicator = GObject.registerClass(
 							const clipboardText = this._getClipboardText(symbol, rawPrice, displayRate, primaryCurrency, category);
 							const clipboard = St.Clipboard.get_default();
 							clipboard.set_text(St.ClipboardType.CLIPBOARD, clipboardText);
-							Main.notify("Copied to clipboard", clipboardText);
+							if (this._settings.get_boolean("clipboard-notification")) {
+								Main.notify("Copied to clipboard", clipboardText);
+							}
 						});
 
 						this._ratesSection.addMenuItem(rateItem);
