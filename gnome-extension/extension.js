@@ -352,11 +352,13 @@ const RabbitForexIndicator = GObject.registerClass(
 		}
 
 		_updatePanelLabel() {
-			const panelItems = [];
 			const maxPanelItems = this._settings.get_int("max-panel-items");
 			const showCurrencyInPanel = this._settings.get_boolean("show-currency-in-panel");
 			const panelSeparator = this._settings.get_string("panel-separator");
 			const panelItemTemplate = this._settings.get_string("panel-item-template");
+			const sortOrder = this._settings.get_string("panel-sort-order");
+
+			const allPanelItems = [];
 
 			for (const category of CATEGORIES) {
 				if (!this._rates[category]) continue;
@@ -364,16 +366,27 @@ const RabbitForexIndicator = GObject.registerClass(
 				const showInPanel = this._getPanelCategory(category);
 
 				for (const symbol of showInPanel) {
-					if (panelItems.length >= maxPanelItems) break;
-
 					if (this._rates[category][symbol] !== undefined) {
 						const rate = this._rates[category][symbol];
+						const price = this._getRawPrice(rate, category);
 						const formattedRate = this._formatPanelRate(rate, category, symbol, showCurrencyInPanel);
 						const panelItem = panelItemTemplate.replace("{symbol}", symbol).replace("{rate}", formattedRate);
-						panelItems.push(panelItem);
+						allPanelItems.push({ symbol, price, panelItem });
 					}
 				}
 			}
+
+			if (sortOrder === "symbol-asc") {
+				allPanelItems.sort((a, b) => a.symbol.localeCompare(b.symbol));
+			} else if (sortOrder === "symbol-desc") {
+				allPanelItems.sort((a, b) => b.symbol.localeCompare(a.symbol));
+			} else if (sortOrder === "price-asc") {
+				allPanelItems.sort((a, b) => a.price - b.price);
+			} else if (sortOrder === "price-desc") {
+				allPanelItems.sort((a, b) => b.price - a.price);
+			}
+
+			const panelItems = allPanelItems.slice(0, maxPanelItems).map((item) => item.panelItem);
 
 			if (panelItems.length === 0) {
 				this._panelLabel.text = "Rabbit Forex";

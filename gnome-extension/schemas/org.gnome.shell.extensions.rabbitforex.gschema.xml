@@ -35,6 +35,12 @@
       <description>Maximum number of rates to display in the panel</description>
     </key>
 
+		<key name="panel-sort-order" type="s">
+      <default>'none'</default>
+      <summary>Panel sort order</summary>
+      <description>How to sort panel items: none (as configured), symbol-asc, symbol-desc, price-asc, price-desc</description>
+    </key>
+
     <key name="panel-separator" type="s">
       <default>' | '</default>
       <summary>Panel separator</summary>

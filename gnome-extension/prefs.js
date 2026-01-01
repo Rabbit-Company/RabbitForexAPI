@@ -212,6 +212,14 @@ const SYMBOL_POSITIONS = [
 	{ id: "after", label: "After price (100 $)" },
 ];
 
+const PANEL_SORT_OPTIONS = [
+	{ id: "none", label: "No sorting" },
+	{ id: "symbol-asc", label: "Symbol (A → Z)" },
+	{ id: "symbol-desc", label: "Symbol (Z → A)" },
+	{ id: "price-asc", label: "Price (Low → High)" },
+	{ id: "price-desc", label: "Price (High → Low)" },
+];
+
 export default class RabbitForexPreferences extends ExtensionPreferences {
 	fillPreferencesWindow(window) {
 		const settings = this.getSettings();
@@ -289,6 +297,28 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 			settings.set_int("max-panel-items", adj.value);
 		});
 		panelGroup.add(maxPanelRow);
+
+		// Panel sort order dropdown
+		const sortModel = new Gtk.StringList();
+		for (const option of PANEL_SORT_OPTIONS) {
+			sortModel.append(option.label);
+		}
+
+		const sortRow = new Adw.ComboRow({
+			title: "Sort Order",
+			subtitle: "How to sort items displayed in the panel",
+			model: sortModel,
+		});
+
+		const currentSort = settings.get_string("panel-sort-order");
+		const sortIndex = PANEL_SORT_OPTIONS.findIndex((o) => o.id === currentSort);
+		sortRow.selected = sortIndex >= 0 ? sortIndex : 0;
+
+		sortRow.connect("notify::selected", () => {
+			const selected = PANEL_SORT_OPTIONS[sortRow.selected].id;
+			settings.set_string("panel-sort-order", selected);
+		});
+		panelGroup.add(sortRow);
 
 		// Panel separator
 		const separatorRow = new Adw.EntryRow({
