@@ -38,7 +38,7 @@
 		<key name="panel-sort-order" type="s">
       <default>'none'</default>
       <summary>Panel sort order</summary>
-      <description>How to sort panel items: none (as configured), symbol-asc, symbol-desc, price-asc, price-desc</description>
+      <description>How to sort panel items: none, symbol-asc, symbol-desc, price-asc, price-desc</description>
     </key>
 
     <key name="panel-separator" type="s">
