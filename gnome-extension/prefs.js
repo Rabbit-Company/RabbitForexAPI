@@ -334,7 +334,7 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 
 		const panelPositionRow = new Adw.ComboRow({
 			title: "Panel Position",
-			subtitle: "Where to place the indicator",
+			subtitle: "Where to place the indicator in the panel",
 			model: panelPositionModel,
 		});
 
@@ -347,6 +347,23 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 			settings.set_string("panel-position", selected);
 		});
 		panelGroup.add(panelPositionRow);
+
+		// Panel index (order within the box)
+		const panelIndexRow = new Adw.SpinRow({
+			title: "Panel Index",
+			subtitle: "Order within panel area",
+			adjustment: new Gtk.Adjustment({
+				lower: 0,
+				upper: 20,
+				step_increment: 1,
+				page_increment: 1,
+				value: settings.get_int("panel-index"),
+			}),
+		});
+		panelIndexRow.adjustment.connect("value-changed", (adj) => {
+			settings.set_int("panel-index", adj.value);
+		});
+		panelGroup.add(panelIndexRow);
 
 		// Panel separator
 		const separatorRow = new Adw.EntryRow({

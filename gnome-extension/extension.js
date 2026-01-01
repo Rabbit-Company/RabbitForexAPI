@@ -676,6 +676,10 @@ export default class RabbitForexExtension extends Extension {
 		this._positionChangedId = this._settings.connect("changed::panel-position", () => {
 			this._repositionIndicator();
 		});
+
+		this._indexChangedId = this._settings.connect("changed::panel-index", () => {
+			this._repositionIndicator();
+		});
 	}
 
 	_getBoxFromPosition(position) {
@@ -686,8 +690,9 @@ export default class RabbitForexExtension extends Extension {
 	_addIndicator() {
 		this._indicator = new RabbitForexIndicator(this);
 		const position = this._settings.get_string("panel-position");
+		const index = this._settings.get_int("panel-index");
 		const box = this._getBoxFromPosition(position);
-		Main.panel.addToStatusArea(this.uuid, this._indicator, 0, box);
+		Main.panel.addToStatusArea(this.uuid, this._indicator, index, box);
 	}
 
 	_repositionIndicator() {
@@ -704,8 +709,9 @@ export default class RabbitForexExtension extends Extension {
 			this._indicator._timestamps = timestamps;
 
 			const position = this._settings.get_string("panel-position");
+			const index = this._settings.get_int("panel-index");
 			const box = this._getBoxFromPosition(position);
-			Main.panel.addToStatusArea(this.uuid, this._indicator, 0, box);
+			Main.panel.addToStatusArea(this.uuid, this._indicator, index, box);
 
 			this._indicator._updateDisplay();
 		}
@@ -715,6 +721,11 @@ export default class RabbitForexExtension extends Extension {
 		if (this._positionChangedId) {
 			this._settings.disconnect(this._positionChangedId);
 			this._positionChangedId = null;
+		}
+
+		if (this._indexChangedId) {
+			this._settings.disconnect(this._indexChangedId);
+			this._indexChangedId = null;
 		}
 
 		if (this._indicator) {

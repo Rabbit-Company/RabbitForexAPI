@@ -1,166 +1,179 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="rabbitforex">
-	<schema id="org.gnome.shell.extensions.rabbitforex" path="/org/gnome/shell/extensions/rabbitforex/">
+	<schema id="org.gnome.shell.extensions.rabbitforex"
+		path="/org/gnome/shell/extensions/rabbitforex/">
 
-	<!-- General Settings -->
-	<key name="update-interval" type="i">
-		<default>30</default>
-		<summary>Update interval in seconds</summary>
-		<description>How often to fetch new exchange rates from the API</description>
-	</key>
+		<!-- General Settings -->
+		<key name="update-interval" type="i">
+			<default>30</default>
+			<summary>Update interval in seconds</summary>
+			<description>How often to fetch new exchange rates from the API</description>
+		</key>
 
-	<key name="primary-currency" type="s">
-		<default>'USD'</default>
-		<summary>Primary currency</summary>
-		<description>The primary fiat currency in which prices should be displayed</description>
-	</key>
+		<key name="primary-currency" type="s">
+			<default>'USD'</default>
+			<summary>Primary currency</summary>
+			<description>The primary fiat currency in which prices should be displayed</description>
+		</key>
 
-	<key name="metals-unit" type="s">
-		<default>'troy-ounce'</default>
-		<summary>Metals unit</summary>
-		<description>Unit for displaying metal prices: gram or troy-ounce</description>
-	</key>
+		<key name="metals-unit" type="s">
+			<default>'troy-ounce'</default>
+			<summary>Metals unit</summary>
+			<description>Unit for displaying metal prices: gram or troy-ounce</description>
+		</key>
 
-	<!-- Panel Settings -->
-	<key name="show-currency-in-panel" type="b">
-		<default>true</default>
-		<summary>Show currency in panel</summary>
-		<description>Display the currency symbol or code alongside rates in the panel</description>
-	</key>
+		<!-- Panel Settings -->
+		<key name="show-currency-in-panel" type="b">
+			<default>true</default>
+			<summary>Show currency in panel</summary>
+			<description>Display the currency symbol or code alongside rates in the panel</description>
+		</key>
 
-	<key name="max-panel-items" type="i">
-		<default>3</default>
-		<summary>Maximum panel items</summary>
-		<description>Maximum number of rates to display in the panel</description>
-	</key>
+		<key name="max-panel-items" type="i">
+			<default>3</default>
+			<summary>Maximum panel items</summary>
+			<description>Maximum number of rates to display in the panel</description>
+		</key>
 
-	<key name="panel-sort-order" type="s">
-		<default>'none'</default>
-		<summary>Panel sort order</summary>
-		<description>How to sort panel items: none (as configured), symbol-asc, symbol-desc, price-asc, price-desc</description>
-	</key>
+		<key name="panel-sort-order" type="s">
+			<default>'none'</default>
+			<summary>Panel sort order</summary>
+			<description>How to sort panel items: none (as configured), symbol-asc, symbol-desc,
+				price-asc, price-desc</description>
+		</key>
 
-	<key name="panel-position" type="s">
-		<default>'right'</default>
-		<summary>Panel position</summary>
-		<description>Where to place the indicator in the panel: left, center, right</description>
-	</key>
+		<key name="panel-position" type="s">
+			<default>'right'</default>
+			<summary>Panel position</summary>
+			<description>Where to place the indicator in the panel: left, center, right</description>
+		</key>
 
-	<key name="panel-separator" type="s">
-		<default>' | '</default>
-		<summary>Panel separator</summary>
-		<description>Separator between items in the panel</description>
-	</key>
+		<key name="panel-index" type="i">
+			<default>0</default>
+			<summary>Panel index</summary>
+			<description>Position index within the panel box</description>
+		</key>
 
-	<key name="panel-item-template" type="s">
-		<default>'{symbol}: {rate}'</default>
-		<summary>Panel item template</summary>
-		<description>Template for displaying items in the panel. Use {symbol} and {rate} as placeholders.</description>
-	</key>
+		<key name="panel-separator" type="s">
+			<default>' | '</default>
+			<summary>Panel separator</summary>
+			<description>Separator between items in the panel</description>
+		</key>
 
-	<!-- Menu Settings -->
-	<key name="menu-item-template" type="s">
-		<default>'{symbol}: {rate}'</default>
-		<summary>Menu item template</summary>
-		<description>Template for displaying items in the dropdown menu. Use {symbol} and {rate} as placeholders.</description>
-	</key>
+		<key name="panel-item-template" type="s">
+			<default>'{symbol}: {rate}'</default>
+			<summary>Panel item template</summary>
+			<description>Template for displaying items in the panel. Use {symbol} and {rate} as
+				placeholders.</description>
+		</key>
 
-	<!-- Clipboard Settings -->
-	<key name="clipboard-notification" type="b">
-		<default>true</default>
-		<summary>Show clipboard notification</summary>
-		<description>Show a notification when a rate is copied to clipboard</description>
-	</key>
+		<!-- Menu Settings -->
+		<key name="menu-item-template" type="s">
+			<default>'{symbol}: {rate}'</default>
+			<summary>Menu item template</summary>
+			<description>Template for displaying items in the dropdown menu. Use {symbol} and {rate}
+				as
+				placeholders.</description>
+		</key>
 
-	<key name="clipboard-template" type="s">
-		<default>'{symbol}: {rate}'</default>
-		<summary>Clipboard template</summary>
-		<description>Template for copying to clipboard when using display format. Use {symbol} and {rate} as placeholders.</description>
-	</key>
+		<!-- Clipboard Settings -->
+		<key name="clipboard-notification" type="b">
+			<default>true</default>
+			<summary>Show clipboard notification</summary>
+			<description>Show a notification when a rate is copied to clipboard</description>
+		</key>
 
-	<key name="clipboard-format" type="s">
-		<default>'display-format'</default>
-		<summary>Clipboard format</summary>
-		<description>Format of copied text: display-format, formatted-price or price-only</description>
-	</key>
+		<key name="clipboard-template" type="s">
+			<default>'{symbol}: {rate}'</default>
+			<summary>Clipboard template</summary>
+			<description>Template for copying to clipboard when using display format. Use {symbol}
+				and
+				{rate} as placeholders.</description>
+		</key>
 
-	<!-- Number Formatting Settings -->
-	<key name="number-format" type="s">
-		<default>'auto'</default>
-		<summary>Number format style</summary>
-		<description>How numbers are formatted: auto, fixed, locale, or compact</description>
-	</key>
+		<key name="clipboard-format" type="s">
+			<default>'display-format'</default>
+			<summary>Clipboard format</summary>
+			<description>Format of copied text: display-format, formatted-price or price-only</description>
+		</key>
 
-	<key name="decimal-places" type="i">
-		<default>2</default>
-		<summary>Decimal places</summary>
-		<description>Number of decimal places to display (0-10)</description>
-	</key>
+		<!-- Number Formatting Settings -->
+		<key name="number-format" type="s">
+			<default>'auto'</default>
+			<summary>Number format style</summary>
+			<description>How numbers are formatted: auto, fixed, locale, or compact</description>
+		</key>
 
-	<!-- Currency Symbol Settings -->
-	<key name="use-currency-symbols" type="b">
-		<default>true</default>
-		<summary>Use currency symbols</summary>
-		<description>Use symbols like €, $, £ instead of currency codes</description>
-	</key>
+		<key name="decimal-places" type="i">
+			<default>2</default>
+			<summary>Decimal places</summary>
+			<description>Number of decimal places to display (0-10)</description>
+		</key>
 
-	<key name="symbol-position" type="s">
-		<default>'before'</default>
-		<summary>Symbol position</summary>
-		<description>Where to place the currency symbol: before or after the price</description>
-	</key>
+		<!-- Currency Symbol Settings -->
+		<key name="use-currency-symbols" type="b">
+			<default>true</default>
+			<summary>Use currency symbols</summary>
+			<description>Use symbols like €, $, £ instead of currency codes</description>
+		</key>
 
-	<!-- Fiat Currency Settings -->
-	<key name="watched-fiat" type="as">
-		<default>['EUR', 'GBP', 'JPY']</default>
-		<summary>Watched fiat currencies</summary>
-		<description>List of fiat currency symbols to monitor</description>
-	</key>
+		<key name="symbol-position" type="s">
+			<default>'before'</default>
+			<summary>Symbol position</summary>
+			<description>Where to place the currency symbol: before or after the price</description>
+		</key>
 
-	<key name="panel-fiat" type="as">
-		<default>['EUR']</default>
-		<summary>Panel fiat currencies</summary>
-		<description>Fiat currencies to show in the panel</description>
-	</key>
+		<!-- Fiat Currency Settings -->
+		<key name="watched-fiat" type="as">
+			<default>['EUR', 'GBP', 'JPY']</default>
+			<summary>Watched fiat currencies</summary>
+			<description>List of fiat currency symbols to monitor</description>
+		</key>
 
-	<!-- Metals Settings -->
-	<key name="watched-metals" type="as">
-		<default>['GOLD', 'SILVER']</default>
-		<summary>Watched metals</summary>
-		<description>List of metal symbols to monitor</description>
-	</key>
+		<key name="panel-fiat" type="as">
+			<default>['EUR']</default>
+			<summary>Panel fiat currencies</summary>
+			<description>Fiat currencies to show in the panel</description>
+		</key>
 
-	<key name="panel-metals" type="as">
-		<default>[]</default>
-		<summary>Panel metals</summary>
-		<description>Metals to show in the panel</description>
-	</key>
+		<!-- Metals Settings -->
+		<key name="watched-metals" type="as">
+			<default>['GOLD', 'SILVER']</default>
+			<summary>Watched metals</summary>
+			<description>List of metal symbols to monitor</description>
+		</key>
 
-	<!-- Crypto Settings -->
-	<key name="watched-crypto" type="as">
-		<default>['BTC', 'ETH']</default>
-		<summary>Watched cryptocurrencies</summary>
-		<description>List of cryptocurrency symbols to monitor</description>
-	</key>
+		<key name="panel-metals" type="as">
+			<default>[]</default>
+			<summary>Panel metals</summary>
+			<description>Metals to show in the panel</description>
+		</key>
 
-	<key name="panel-crypto" type="as">
-		<default>['BTC']</default>
-		<summary>Panel cryptocurrencies</summary>
-		<description>Cryptocurrencies to show in the panel</description>
-	</key>
+		<!-- Crypto Settings -->
+		<key name="watched-crypto" type="as">
+			<default>['BTC', 'ETH']</default>
+			<summary>Watched cryptocurrencies</summary>
+			<description>List of cryptocurrency symbols to monitor</description>
+		</key>
 
-	<!-- Stocks Settings -->
-	<key name="watched-stocks" type="as">
-		<default>['AAPL', 'GOOGL', 'MSFT']</default>
-		<summary>Watched stocks</summary>
-		<description>List of stock symbols to monitor</description>
-	</key>
+		<key name="panel-crypto" type="as">
+			<default>['BTC']</default>
+			<summary>Panel cryptocurrencies</summary>
+			<description>Cryptocurrencies to show in the panel</description>
+		</key>
 
-	<key name="panel-stocks" type="as">
-		<default>[]</default>
-		<summary>Panel stocks</summary>
-		<description>Stocks to show in the panel</description>
-	</key>
+		<!-- Stocks Settings -->
+		<key name="watched-stocks" type="as">
+			<default>['AAPL', 'GOOGL', 'MSFT']</default>
+			<summary>Watched stocks</summary>
+			<description>List of stock symbols to monitor</description>
+		</key>
+
+		<key name="panel-stocks" type="as">
+			<default>[]</default>
+			<summary>Panel stocks</summary>
+			<description>Stocks to show in the panel</description>
+		</key>
 
 	</schema>
 </schemalist>
