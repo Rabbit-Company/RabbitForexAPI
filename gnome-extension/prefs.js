@@ -388,7 +388,7 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		// Panel template help text
 		const panelTemplateHelpRow = new Adw.ActionRow({
 			title: "Template Placeholders",
-			subtitle: "Use {symbol} for the symbol name and {rate} for the formatted rate",
+			subtitle: "Use {symbol} and {rate}. Supports Pango markup for colors.",
 		});
 		panelTemplateHelpRow.sensitive = false;
 		panelGroup.add(panelTemplateHelpRow);

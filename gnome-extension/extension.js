@@ -389,9 +389,9 @@ const RabbitForexIndicator = GObject.registerClass(
 			const panelItems = allPanelItems.slice(0, maxPanelItems).map((item) => item.panelItem);
 
 			if (panelItems.length === 0) {
-				this._panelLabel.text = "Rabbit Forex";
+				this._panelLabel.clutter_text.set_markup("Rabbit Forex");
 			} else {
-				this._panelLabel.text = panelItems.join(panelSeparator);
+				this._panelLabel.clutter_text.set_markup(panelItems.join(panelSeparator));
 			}
 		}
 
@@ -671,7 +671,7 @@ const RabbitForexIndicator = GObject.registerClass(
 export default class RabbitForexExtension extends Extension {
 	enable() {
 		this._settings = this.getSettings();
-		this._addIndicator();
+		this._addIndicator(false);
 
 		this._positionChangedId = this._settings.connect("changed::panel-position", () => {
 			this._repositionIndicator();
@@ -687,33 +687,37 @@ export default class RabbitForexExtension extends Extension {
 		return allowed.includes(position) ? position : "right";
 	}
 
-	_addIndicator() {
+	_addIndicator(preserveState = false) {
+		let rates = {};
+		let timestamps = {};
+
+		if (preserveState && this._indicator) {
+			rates = this._indicator._rates;
+			timestamps = this._indicator._timestamps;
+			this._indicator.destroy();
+			this._indicator = null;
+		}
+
 		this._indicator = new RabbitForexIndicator(this);
+
+		if (preserveState) {
+			this._indicator._rates = rates;
+			this._indicator._timestamps = timestamps;
+		}
+
 		const position = this._settings.get_string("panel-position");
 		const index = this._settings.get_int("panel-index");
 		const box = this._getBoxFromPosition(position);
 		Main.panel.addToStatusArea(this.uuid, this._indicator, index, box);
+
+		if (preserveState) {
+			this._indicator._updateDisplay();
+		}
 	}
 
 	_repositionIndicator() {
 		if (this._indicator) {
-			const rates = this._indicator._rates;
-			const timestamps = this._indicator._timestamps;
-
-			this._indicator.destroy();
-			this._indicator = null;
-
-			this._indicator = new RabbitForexIndicator(this);
-
-			this._indicator._rates = rates;
-			this._indicator._timestamps = timestamps;
-
-			const position = this._settings.get_string("panel-position");
-			const index = this._settings.get_int("panel-index");
-			const box = this._getBoxFromPosition(position);
-			Main.panel.addToStatusArea(this.uuid, this._indicator, index, box);
-
-			this._indicator._updateDisplay();
+			this._addIndicator(true);
 		}
 	}
 

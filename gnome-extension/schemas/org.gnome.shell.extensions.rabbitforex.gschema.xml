@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <schemalist gettext-domain="rabbitforex">
-	<schema id="org.gnome.shell.extensions.rabbitforex"
-		path="/org/gnome/shell/extensions/rabbitforex/">
+	<schema id="org.gnome.shell.extensions.rabbitforex" path="/org/gnome/shell/extensions/rabbitforex/">
 
 		<!-- General Settings -->
 		<key name="update-interval" type="i">
@@ -55,25 +54,22 @@
 		</key>
 
 		<key name="panel-separator" type="s">
-			<default>' | '</default>
+			<default>'&lt;span color=&quot;#3F3F3F&quot;&gt;|&lt;/span&gt;'</default>
 			<summary>Panel separator</summary>
 			<description>Separator between items in the panel</description>
 		</key>
 
 		<key name="panel-item-template" type="s">
-			<default>'{symbol}: {rate}'</default>
+			<default>' &lt;span color=&quot;#BFBFBF&quot;&gt;{rate}&lt;/span&gt; &lt;span color=&quot;#7F7F7F&quot;&gt;{symbol}&lt;/span&gt; '</default>
 			<summary>Panel item template</summary>
-			<description>Template for displaying items in the panel. Use {symbol} and {rate} as
-				placeholders.</description>
+			<description>Template for displaying items in the panel. Use {symbol} and {rate} as placeholders.</description>
 		</key>
 
 		<!-- Menu Settings -->
 		<key name="menu-item-template" type="s">
 			<default>'{symbol}: {rate}'</default>
 			<summary>Menu item template</summary>
-			<description>Template for displaying items in the dropdown menu. Use {symbol} and {rate}
-				as
-				placeholders.</description>
+			<description>Template for displaying items in the dropdown menu. Use {symbol} and {rate} as placeholders.</description>
 		</key>
 
 		<!-- Clipboard Settings -->
