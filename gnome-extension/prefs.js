@@ -220,6 +220,12 @@ const PANEL_SORT_OPTIONS = [
 	{ id: "price-desc", label: "Price (High → Low)" },
 ];
 
+const PANEL_POSITION_OPTIONS = [
+	{ id: "left", label: "Left" },
+	{ id: "center", label: "Center" },
+	{ id: "right", label: "Right" },
+];
+
 export default class RabbitForexPreferences extends ExtensionPreferences {
 	fillPreferencesWindow(window) {
 		const settings = this.getSettings();
@@ -287,7 +293,7 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 			subtitle: "Maximum number of rates to show in the panel",
 			adjustment: new Gtk.Adjustment({
 				lower: 1,
-				upper: 10,
+				upper: 20,
 				step_increment: 1,
 				page_increment: 1,
 				value: settings.get_int("max-panel-items"),
@@ -319,6 +325,28 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 			settings.set_string("panel-sort-order", selected);
 		});
 		panelGroup.add(sortRow);
+
+		// Panel position dropdown
+		const panelPositionModel = new Gtk.StringList();
+		for (const option of PANEL_POSITION_OPTIONS) {
+			panelPositionModel.append(option.label);
+		}
+
+		const panelPositionRow = new Adw.ComboRow({
+			title: "Panel Position",
+			subtitle: "Where to place the indicator",
+			model: panelPositionModel,
+		});
+
+		const currentPanelPosition = settings.get_string("panel-position");
+		const panelPositionIndex = PANEL_POSITION_OPTIONS.findIndex((o) => o.id === currentPanelPosition);
+		panelPositionRow.selected = panelPositionIndex >= 0 ? panelPositionIndex : 2;
+
+		panelPositionRow.connect("notify::selected", () => {
+			const selected = PANEL_POSITION_OPTIONS[panelPositionRow.selected].id;
+			settings.set_string("panel-position", selected);
+		});
+		panelGroup.add(panelPositionRow);
 
 		// Panel separator
 		const separatorRow = new Adw.EntryRow({

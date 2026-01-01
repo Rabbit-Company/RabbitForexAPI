@@ -670,14 +670,58 @@ const RabbitForexIndicator = GObject.registerClass(
 
 export default class RabbitForexExtension extends Extension {
 	enable() {
+		this._settings = this.getSettings();
+		this._addIndicator();
+
+		this._positionChangedId = this._settings.connect("changed::panel-position", () => {
+			this._repositionIndicator();
+		});
+	}
+
+	_getBoxFromPosition(position) {
+		const allowed = ["left", "center", "right"];
+		return allowed.includes(position) ? position : "right";
+	}
+
+	_addIndicator() {
 		this._indicator = new RabbitForexIndicator(this);
-		Main.panel.addToStatusArea(this.uuid, this._indicator);
+		const position = this._settings.get_string("panel-position");
+		const box = this._getBoxFromPosition(position);
+		Main.panel.addToStatusArea(this.uuid, this._indicator, 0, box);
+	}
+
+	_repositionIndicator() {
+		if (this._indicator) {
+			const rates = this._indicator._rates;
+			const timestamps = this._indicator._timestamps;
+
+			this._indicator.destroy();
+			this._indicator = null;
+
+			this._indicator = new RabbitForexIndicator(this);
+
+			this._indicator._rates = rates;
+			this._indicator._timestamps = timestamps;
+
+			const position = this._settings.get_string("panel-position");
+			const box = this._getBoxFromPosition(position);
+			Main.panel.addToStatusArea(this.uuid, this._indicator, 0, box);
+
+			this._indicator._updateDisplay();
+		}
 	}
 
 	disable() {
+		if (this._positionChangedId) {
+			this._settings.disconnect(this._positionChangedId);
+			this._positionChangedId = null;
+		}
+
 		if (this._indicator) {
 			this._indicator.destroy();
 			this._indicator = null;
 		}
+
+		this._settings = null;
 	}
 }
