@@ -4,7 +4,7 @@ export const openapi = {
 	openapi: "3.1.1",
 	info: {
 		title: "RabbitForexAPI",
-		description: "Foreign exchange (Forex), precious metals, stocks and cryptocurrency API",
+		description: "Foreign exchange (Forex), precious metals, stocks and cryptocurrency API with historical data",
 		version: pkg.version,
 		contact: {
 			name: "Rabbit Company",
@@ -16,283 +16,249 @@ export const openapi = {
 			url: "https://github.com/Rabbit-Company/RabbitForexAPI/blob/main/LICENSE",
 		},
 	},
-	servers: [
-		{
-			url: "https://forex.rabbitmonitor.com",
-		},
-	],
+	servers: [{ url: "https://forex.rabbitmonitor.com" }],
 	tags: [
-		{
-			name: "Health",
-			description: "Health check and statistics endpoints",
-		},
-		{
-			name: "Rates",
-			description: "Exchange rates endpoints",
-		},
-		{
-			name: "Metals",
-			description: "Precious metals prices and exchange rates endpoints",
-		},
-		{
-			name: "Crypto",
-			description: "Cryptocurrency exchange rates endpoints",
-		},
-		{
-			name: "Stocks",
-			description: "Stock prices and exchange rates endpoints",
-		},
-		{
-			name: "Assets",
-			description: "Supported currencies, metals, stocks and cryptocurrencies information",
-		},
+		{ name: "Health", description: "Health check and statistics endpoints" },
+		{ name: "Rates", description: "Live currency exchange rates" },
+		{ name: "Metals", description: "Live precious metals prices" },
+		{ name: "Crypto", description: "Live cryptocurrency prices" },
+		{ name: "Stocks", description: "Live stock prices" },
+		{ name: "Assets", description: "Supported assets information" },
+		{ name: "History", description: "Historical price data" },
 	],
 	paths: {
 		"/": {
 			get: {
 				tags: ["Health"],
 				summary: "Health check and statistics",
-				description: "Returns health status and API statistics",
 				operationId: "getHealth",
-				responses: {
-					"200": {
-						description: "Successful response",
-						content: {
-							"application/json": {
-								schema: {
-									$ref: "#/components/schemas/HealthResponse",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		"/v1/rates": {
-			get: {
-				tags: ["Rates"],
-				summary: "Get all exchange rates with USD as base",
-				description: "Returns all exchange rates with USD as the base currency",
-				operationId: "getAllRates",
-				responses: {
-					"200": {
-						description: "Successful response",
-						content: {
-							"application/json": {
-								schema: {
-									$ref: "#/components/schemas/RatesResponse",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		"/v1/rates/{asset}": {
-			get: {
-				tags: ["Rates"],
-				summary: "Get all exchange rates with specified asset as base",
-				description: "Returns all exchange rates with the specified currency or metal as base",
-				operationId: "getRatesByAsset",
-				parameters: [
-					{
-						name: "asset",
-						in: "path",
-						required: true,
-						description: "Currency code (e.g., USD, EUR, JPY) or metal code (e.g., GOLD, SILVER)",
-						schema: {
-							type: "string",
-							example: "EUR",
-						},
-					},
-				],
-				responses: {
-					"200": {
-						description: "Successful response",
-						content: {
-							"application/json": {
-								schema: {
-									$ref: "#/components/schemas/RatesResponse",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		"/v1/metals/rates": {
-			get: {
-				tags: ["Metals"],
-				summary: "Get all metal rates with USD as base",
-				description: "Returns all metal exchange rates with USD as the base currency",
-				operationId: "getAllMetalRates",
-				responses: {
-					"200": {
-						description: "Successful response",
-						content: {
-							"application/json": {
-								schema: {
-									$ref: "#/components/schemas/MetalRatesResponse",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		"/v1/metals/rates/{asset}": {
-			get: {
-				tags: ["Metals"],
-				summary: "Get all metal rates with specified asset as base",
-				description: "Returns all metal exchange rates with the specified currency or metal as base",
-				operationId: "getMetalRatesByAsset",
-				parameters: [
-					{
-						name: "asset",
-						in: "path",
-						required: true,
-						description: "Currency code (e.g., USD, EUR, JPY) or metal code (e.g., GOLD, SILVER)",
-						schema: {
-							type: "string",
-							example: "GOLD",
-						},
-					},
-				],
-				responses: {
-					"200": {
-						description: "Successful response",
-						content: {
-							"application/json": {
-								schema: {
-									$ref: "#/components/schemas/MetalRatesResponse",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		"/v1/crypto/rates": {
-			get: {
-				tags: ["Crypto"],
-				summary: "Get all cryptocurrency rates with USD as base",
-				description: "Returns all cryptocurrency exchange rates with USD as the base currency",
-				operationId: "getAllCryptoRates",
-				responses: {
-					"200": {
-						description: "Successful response",
-						content: {
-							"application/json": {
-								schema: {
-									$ref: "#/components/schemas/CryptoRatesResponse",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		"/v1/crypto/rates/{asset}": {
-			get: {
-				tags: ["Crypto"],
-				summary: "Get all cryptocurrency rates with specified asset as base",
-				description: "Returns all cryptocurrency exchange rates with the specified currency or cryptocurrency as base",
-				operationId: "getCryptoRatesByAsset",
-				parameters: [
-					{
-						name: "asset",
-						in: "path",
-						required: true,
-						description: "Currency code (e.g., USD, EUR) or cryptocurrency code (e.g., BTC, ETH)",
-						schema: {
-							type: "string",
-							example: "EUR",
-						},
-					},
-				],
-				responses: {
-					"200": {
-						description: "Successful response",
-						content: {
-							"application/json": {
-								schema: {
-									$ref: "#/components/schemas/CryptoRatesResponse",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		"/v1/stocks/rates": {
-			get: {
-				tags: ["Stocks"],
-				summary: "Get all stock rates with USD as base",
-				description: "Returns all stock exchange rates with USD as the base currency",
-				operationId: "getAllStockRates",
-				responses: {
-					"200": {
-						description: "Successful response",
-						content: {
-							"application/json": {
-								schema: {
-									$ref: "#/components/schemas/StockRatesResponse",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		"/v1/stocks/rates/{asset}": {
-			get: {
-				tags: ["Stocks"],
-				summary: "Get all stock rates with specified asset as base",
-				description: "Returns all stock exchange rates with the specified currency or stock as base",
-				operationId: "getStockRatesByAsset",
-				parameters: [
-					{
-						name: "asset",
-						in: "path",
-						required: true,
-						description: "Currency code (e.g., USD, EUR) or stock symbol (e.g., MSFT, NET)",
-						schema: {
-							type: "string",
-							example: "EUR",
-						},
-					},
-				],
-				responses: {
-					"200": {
-						description: "Successful response",
-						content: {
-							"application/json": {
-								schema: {
-									$ref: "#/components/schemas/StockRatesResponse",
-								},
-							},
-						},
-					},
-				},
+				responses: { "200": { content: { "application/json": { schema: { $ref: "#/components/schemas/HealthResponse" } } } } },
 			},
 		},
 		"/v1/assets": {
 			get: {
 				tags: ["Assets"],
-				summary: "Get lists of all supported currencies, metals, stocks and cryptocurrencies",
-				description: "Returns all supported currency, metal, stock, and cryptocurrency codes",
+				summary: "Get all supported assets",
 				operationId: "getAssets",
+				responses: { "200": { content: { "application/json": { schema: { $ref: "#/components/schemas/AssetsResponse" } } } } },
+			},
+		},
+		// Currency endpoints
+		"/v1/rates": {
+			get: {
+				tags: ["Rates"],
+				summary: "Get currency rates with USD as base",
+				operationId: "getAllRates",
+				responses: { "200": { content: { "application/json": { schema: { $ref: "#/components/schemas/RatesResponse" } } } } },
+			},
+		},
+		"/v1/rates/{base}": {
+			get: {
+				tags: ["Rates"],
+				summary: "Get currency rates with specified base",
+				operationId: "getRatesByBase",
+				parameters: [{ name: "base", in: "path", required: true, schema: { type: "string", example: "EUR" } }],
+				responses: { "200": { content: { "application/json": { schema: { $ref: "#/components/schemas/RatesResponse" } } } } },
+			},
+		},
+		"/v1/rates/history/{symbol}": {
+			get: {
+				tags: ["History"],
+				summary: "Get currency raw history (last 24 hours)",
+				description: "Returns all raw price data points from the last 24 hours",
+				operationId: "getCurrencyRawHistory",
+				parameters: [{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "EUR" } }],
 				responses: {
-					"200": {
-						description: "Successful response",
-						content: {
-							"application/json": {
-								schema: {
-									$ref: "#/components/schemas/AssetsResponse",
-								},
-							},
-						},
-					},
+					"200": { content: { "application/json": { schema: { $ref: "#/components/schemas/RawHistoryResponse" } } } },
+					"503": { content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+				},
+			},
+		},
+		"/v1/rates/history/{symbol}/hourly": {
+			get: {
+				tags: ["History"],
+				summary: "Get currency hourly history (last 30 days)",
+				description: "Returns hourly aggregated price data from the last 30 days",
+				operationId: "getCurrencyHourlyHistory",
+				parameters: [{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "EUR" } }],
+				responses: {
+					"200": { content: { "application/json": { schema: { $ref: "#/components/schemas/AggregatedHistoryResponse" } } } },
+					"503": { content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+				},
+			},
+		},
+		"/v1/rates/history/{symbol}/daily": {
+			get: {
+				tags: ["History"],
+				summary: "Get currency daily history (all time)",
+				description: "Returns daily aggregated price data from all available history",
+				operationId: "getCurrencyDailyHistory",
+				parameters: [{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "EUR" } }],
+				responses: {
+					"200": { content: { "application/json": { schema: { $ref: "#/components/schemas/AggregatedHistoryResponse" } } } },
+					"503": { content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+				},
+			},
+		},
+		// Metal endpoints
+		"/v1/metals/rates": {
+			get: {
+				tags: ["Metals"],
+				summary: "Get metal rates with USD as base",
+				operationId: "getAllMetalRates",
+				responses: { "200": { content: { "application/json": { schema: { $ref: "#/components/schemas/MetalRatesResponse" } } } } },
+			},
+		},
+		"/v1/metals/rates/{base}": {
+			get: {
+				tags: ["Metals"],
+				summary: "Get metal rates with specified base",
+				operationId: "getMetalRatesByBase",
+				parameters: [{ name: "base", in: "path", required: true, schema: { type: "string", example: "GOLD" } }],
+				responses: { "200": { content: { "application/json": { schema: { $ref: "#/components/schemas/MetalRatesResponse" } } } } },
+			},
+		},
+		"/v1/metals/history/{symbol}": {
+			get: {
+				tags: ["History"],
+				summary: "Get metal raw history (last 24 hours)",
+				operationId: "getMetalRawHistory",
+				parameters: [{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "GOLD" } }],
+				responses: {
+					"200": { content: { "application/json": { schema: { $ref: "#/components/schemas/RawHistoryResponse" } } } },
+					"503": { content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+				},
+			},
+		},
+		"/v1/metals/history/{symbol}/hourly": {
+			get: {
+				tags: ["History"],
+				summary: "Get metal hourly history (last 30 days)",
+				operationId: "getMetalHourlyHistory",
+				parameters: [{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "GOLD" } }],
+				responses: {
+					"200": { content: { "application/json": { schema: { $ref: "#/components/schemas/AggregatedHistoryResponse" } } } },
+					"503": { content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+				},
+			},
+		},
+		"/v1/metals/history/{symbol}/daily": {
+			get: {
+				tags: ["History"],
+				summary: "Get metal daily history (all time)",
+				operationId: "getMetalDailyHistory",
+				parameters: [{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "GOLD" } }],
+				responses: {
+					"200": { content: { "application/json": { schema: { $ref: "#/components/schemas/AggregatedHistoryResponse" } } } },
+					"503": { content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+				},
+			},
+		},
+		// Crypto endpoints
+		"/v1/crypto/rates": {
+			get: {
+				tags: ["Crypto"],
+				summary: "Get crypto rates with USD as base",
+				operationId: "getAllCryptoRates",
+				responses: { "200": { content: { "application/json": { schema: { $ref: "#/components/schemas/CryptoRatesResponse" } } } } },
+			},
+		},
+		"/v1/crypto/rates/{base}": {
+			get: {
+				tags: ["Crypto"],
+				summary: "Get crypto rates with specified base",
+				operationId: "getCryptoRatesByBase",
+				parameters: [{ name: "base", in: "path", required: true, schema: { type: "string", example: "BTC" } }],
+				responses: { "200": { content: { "application/json": { schema: { $ref: "#/components/schemas/CryptoRatesResponse" } } } } },
+			},
+		},
+		"/v1/crypto/history/{symbol}": {
+			get: {
+				tags: ["History"],
+				summary: "Get crypto raw history (last 24 hours)",
+				operationId: "getCryptoRawHistory",
+				parameters: [{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "BTC" } }],
+				responses: {
+					"200": { content: { "application/json": { schema: { $ref: "#/components/schemas/RawHistoryResponse" } } } },
+					"503": { content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+				},
+			},
+		},
+		"/v1/crypto/history/{symbol}/hourly": {
+			get: {
+				tags: ["History"],
+				summary: "Get crypto hourly history (last 30 days)",
+				operationId: "getCryptoHourlyHistory",
+				parameters: [{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "BTC" } }],
+				responses: {
+					"200": { content: { "application/json": { schema: { $ref: "#/components/schemas/AggregatedHistoryResponse" } } } },
+					"503": { content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+				},
+			},
+		},
+		"/v1/crypto/history/{symbol}/daily": {
+			get: {
+				tags: ["History"],
+				summary: "Get crypto daily history (all time)",
+				operationId: "getCryptoDailyHistory",
+				parameters: [{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "BTC" } }],
+				responses: {
+					"200": { content: { "application/json": { schema: { $ref: "#/components/schemas/AggregatedHistoryResponse" } } } },
+					"503": { content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+				},
+			},
+		},
+		// Stock endpoints
+		"/v1/stocks/rates": {
+			get: {
+				tags: ["Stocks"],
+				summary: "Get stock rates with USD as base",
+				operationId: "getAllStockRates",
+				responses: { "200": { content: { "application/json": { schema: { $ref: "#/components/schemas/StockRatesResponse" } } } } },
+			},
+		},
+		"/v1/stocks/rates/{base}": {
+			get: {
+				tags: ["Stocks"],
+				summary: "Get stock rates with specified base",
+				operationId: "getStockRatesByBase",
+				parameters: [{ name: "base", in: "path", required: true, schema: { type: "string", example: "MSFT" } }],
+				responses: { "200": { content: { "application/json": { schema: { $ref: "#/components/schemas/StockRatesResponse" } } } } },
+			},
+		},
+		"/v1/stocks/history/{symbol}": {
+			get: {
+				tags: ["History"],
+				summary: "Get stock raw history (last 24 hours)",
+				operationId: "getStockRawHistory",
+				parameters: [{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "MSFT" } }],
+				responses: {
+					"200": { content: { "application/json": { schema: { $ref: "#/components/schemas/RawHistoryResponse" } } } },
+					"503": { content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+				},
+			},
+		},
+		"/v1/stocks/history/{symbol}/hourly": {
+			get: {
+				tags: ["History"],
+				summary: "Get stock hourly history (last 30 days)",
+				operationId: "getStockHourlyHistory",
+				parameters: [{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "MSFT" } }],
+				responses: {
+					"200": { content: { "application/json": { schema: { $ref: "#/components/schemas/AggregatedHistoryResponse" } } } },
+					"503": { content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+				},
+			},
+		},
+		"/v1/stocks/history/{symbol}/daily": {
+			get: {
+				tags: ["History"],
+				summary: "Get stock daily history (all time)",
+				operationId: "getStockDailyHistory",
+				parameters: [{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "MSFT" } }],
+				responses: {
+					"200": { content: { "application/json": { schema: { $ref: "#/components/schemas/AggregatedHistoryResponse" } } } },
+					"503": { content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
 				},
 			},
 		},
@@ -302,489 +268,140 @@ export const openapi = {
 			HealthResponse: {
 				type: "object",
 				properties: {
-					program: {
-						type: "string",
-						example: "RabbitForexAPI",
-					},
-					version: {
-						type: "string",
-						example: pkg.version,
-					},
-					sourceCode: {
-						type: "string",
-						example: "https://github.com/Rabbit-Company/RabbitForexAPI",
-					},
+					program: { type: "string", example: "RabbitForexAPI" },
+					version: { type: "string", example: pkg.version },
+					sourceCode: { type: "string" },
 					monitorStats: {
-						$ref: "#/components/schemas/MonitorStats",
-					},
-					httpStats: {
-						$ref: "#/components/schemas/HttpStats",
-					},
-					lastUpdate: {
-						type: "string",
-						format: "date-time",
-						example: "2025-11-07T07:07:54.995Z",
-					},
-				},
-				required: ["program", "version", "sourceCode", "monitorStats", "httpStats", "lastUpdate"],
-			},
-			MonitorStats: {
-				type: "object",
-				properties: {
-					currencyCount: {
-						type: "integer",
-						example: 162,
-					},
-					metalCount: {
-						type: "integer",
-						example: 4,
-					},
-					cryptoCount: {
-						type: "integer",
-						example: 2885,
-					},
-					stockCount: {
-						type: "integer",
-						example: 23,
-					},
-					totalAssetCount: {
-						type: "integer",
-						example: 3075,
-					},
-					updateInterval: {
-						type: "string",
-						example: "60s",
-					},
-				},
-				required: ["currencyCount", "metalCount", "cryptoCount", "stockCount", "totalAssetCount", "updateInterval"],
-			},
-			HttpStats: {
-				type: "object",
-				properties: {
-					pendingRequests: {
-						type: "integer",
-						example: 1,
-					},
-				},
-				required: ["pendingRequests"],
-			},
-			RatesResponse: {
-				type: "object",
-				properties: {
-					base: {
-						type: "string",
-						description: "Base currency or metal code",
-						example: "USD",
-					},
-					rates: {
 						type: "object",
-						additionalProperties: {
-							type: "number",
-						},
-						description: "Exchange rates from base to target assets",
-						example: {
-							USD: 1,
-							EUR: 0.86702,
-							JPY: 153.4793,
-							GBP: 0.7624,
-							CHF: 0.80776,
+						properties: {
+							currencyCount: { type: "integer", example: 162 },
+							metalCount: { type: "integer", example: 4 },
+							cryptoCount: { type: "integer", example: 2500 },
+							stockCount: { type: "integer", example: 25 },
+							totalAssetCount: { type: "integer", example: 2691 },
+							updateInterval: { type: "string", example: "30s" },
+							historyEnabled: { type: "boolean", example: true },
 						},
 					},
-					timestamps: {
-						$ref: "#/components/schemas/CurrencyTimestamps",
-					},
+					httpStats: { type: "object", properties: { pendingRequests: { type: "integer" } } },
+					lastUpdate: { type: "string", format: "date-time" },
 				},
-				required: ["base", "rates", "timestamps"],
-			},
-			MetalRatesResponse: {
-				type: "object",
-				properties: {
-					base: {
-						type: "string",
-						description: "Base currency or metal code",
-						example: "USD",
-					},
-					rates: {
-						type: "object",
-						additionalProperties: {
-							type: "number",
-						},
-						description: "Metal exchange rates from base to target assets",
-						example: {
-							GOLD: 0.0077614,
-							SILVER: 0.63833,
-							PLATINUM: 0.020007,
-							COPPER: 93.4827,
-						},
-					},
-					timestamps: {
-						$ref: "#/components/schemas/MetalTimestamps",
-					},
-				},
-				required: ["base", "rates", "timestamps"],
-			},
-			CryptoRatesResponse: {
-				type: "object",
-				properties: {
-					base: {
-						type: "string",
-						description: "Base currency, metal, or cryptocurrency code",
-						example: "USD",
-					},
-					rates: {
-						type: "object",
-						additionalProperties: {
-							type: "number",
-						},
-						description: "Cryptocurrency exchange rates from base to target assets",
-						example: {
-							BTC: 0.0000098082,
-							ETH: 0.00029232,
-							SOL: 0.0062949,
-							ADA: 1.7876,
-							XRP: 0.4379,
-							DOT: 0.32144,
-						},
-					},
-					timestamps: {
-						$ref: "#/components/schemas/CryptoTimestamps",
-					},
-				},
-				required: ["base", "rates", "timestamps"],
-			},
-			StockRatesResponse: {
-				type: "object",
-				properties: {
-					base: {
-						type: "string",
-						description: "Base currency or stock symbol",
-						example: "USD",
-					},
-					rates: {
-						type: "object",
-						additionalProperties: {
-							type: "number",
-						},
-						description: "Stock exchange rates from base to target assets",
-						example: {
-							VOW3d: 0.01227,
-							NET: 0.004275,
-							MSFT: 0.0020088,
-							ASMLa: 0.0013276,
-							V: 0.0029717,
-							UBNT: 0.0016181,
-						},
-					},
-					timestamps: {
-						$ref: "#/components/schemas/StockTimestamps",
-					},
-				},
-				required: ["base", "rates", "timestamps"],
 			},
 			AssetsResponse: {
 				type: "object",
 				properties: {
-					currencies: {
+					currencies: { type: "array", items: { type: "string" }, example: ["USD", "EUR", "GBP"] },
+					metals: { type: "array", items: { type: "string" }, example: ["GOLD", "SILVER"] },
+					cryptocurrencies: { type: "array", items: { type: "string" }, example: ["BTC", "ETH"] },
+					stocks: { type: "array", items: { type: "string" }, example: ["MSFT", "AAPL"] },
+					timestamps: {
+						type: "object",
+						properties: {
+							currency: { type: "string", format: "date-time", nullable: true },
+							metal: { type: "string", format: "date-time", nullable: true },
+							crypto: { type: "string", format: "date-time", nullable: true },
+							stock: { type: "string", format: "date-time", nullable: true },
+						},
+					},
+				},
+			},
+			RatesResponse: {
+				type: "object",
+				properties: {
+					base: { type: "string", example: "USD" },
+					rates: { type: "object", additionalProperties: { type: "number" }, example: { EUR: 0.92, GBP: 0.79 } },
+					timestamps: { type: "object", properties: { currency: { type: "string", format: "date-time", nullable: true } } },
+				},
+			},
+			MetalRatesResponse: {
+				type: "object",
+				properties: {
+					base: { type: "string", example: "USD" },
+					rates: { type: "object", additionalProperties: { type: "number" } },
+					timestamps: {
+						type: "object",
+						properties: {
+							currency: { type: "string", format: "date-time", nullable: true },
+							metal: { type: "string", format: "date-time", nullable: true },
+						},
+					},
+				},
+			},
+			CryptoRatesResponse: {
+				type: "object",
+				properties: {
+					base: { type: "string", example: "USD" },
+					rates: { type: "object", additionalProperties: { type: "number" } },
+					timestamps: {
+						type: "object",
+						properties: {
+							currency: { type: "string", format: "date-time", nullable: true },
+							crypto: { type: "string", format: "date-time", nullable: true },
+						},
+					},
+				},
+			},
+			StockRatesResponse: {
+				type: "object",
+				properties: {
+					base: { type: "string", example: "USD" },
+					rates: { type: "object", additionalProperties: { type: "number" } },
+					timestamps: {
+						type: "object",
+						properties: {
+							currency: { type: "string", format: "date-time", nullable: true },
+							stock: { type: "string", format: "date-time", nullable: true },
+						},
+					},
+				},
+			},
+			RawHistoryResponse: {
+				type: "object",
+				properties: {
+					symbol: { type: "string", example: "BTC" },
+					base: { type: "string", example: "USD" },
+					resolution: { type: "string", enum: ["raw"], example: "raw" },
+					data: {
 						type: "array",
 						items: {
-							type: "string",
+							type: "object",
+							properties: {
+								symbol: { type: "string", example: "BTC" },
+								price: { type: "number", example: 97500.1234 },
+								timestamp: { type: "string", format: "date-time" },
+							},
 						},
-						description: "List of supported currency codes",
-						example: ["AED", "AFN", "ALL", "AMD", "ANG", "AOA", "ARS", "AUD", "EUR", "USD", "GBP", "JPY", "CHF", "CAD"],
 					},
-					metals: {
+				},
+			},
+			AggregatedHistoryResponse: {
+				type: "object",
+				properties: {
+					symbol: { type: "string", example: "BTC" },
+					base: { type: "string", example: "USD" },
+					resolution: { type: "string", enum: ["hourly", "daily"], example: "hourly" },
+					data: {
 						type: "array",
 						items: {
-							type: "string",
+							type: "object",
+							properties: {
+								symbol: { type: "string", example: "BTC" },
+								min: { type: "number", example: 96000 },
+								max: { type: "number", example: 99000 },
+								avg: { type: "number", example: 97500 },
+								open: { type: "number", example: 96500 },
+								close: { type: "number", example: 98000 },
+								sampleCount: { type: "integer", example: 120 },
+								timestamp: { type: "string", example: "2024-01-15T12:00:00Z" },
+							},
 						},
-						description: "List of supported metal codes",
-						example: ["GOLD", "SILVER", "PALLADIUM", "COPPER"],
-					},
-					cryptocurrencies: {
-						type: "array",
-						items: {
-							type: "string",
-						},
-						description: "List of supported cryptocurrency codes",
-						example: ["BTC", "ETH", "SOL", "ADA", "XRP", "DOT", "DOGE", "AVAX", "LINK"],
-					},
-					stocks: {
-						type: "array",
-						items: {
-							type: "string",
-						},
-						description: "List of supported stock symbols",
-						example: ["VOW3d", "NET", "MSFT", "ASMLa", "V", "UBNT", "SMSDl", "FB"],
-					},
-					timestamps: {
-						$ref: "#/components/schemas/AssetTimestamps",
 					},
 				},
-				required: ["currencies", "metals", "cryptocurrencies", "stocks", "timestamps"],
 			},
-			CurrencyTimestamps: {
+			ErrorResponse: {
 				type: "object",
 				properties: {
-					currency: {
-						type: "string",
-						format: "date-time",
-						nullable: true,
-						description: "Last currency data update timestamp",
-						example: "2025-11-07T07:06:10.544Z",
-					},
-				},
-				required: ["currency"],
-			},
-			MetalTimestamps: {
-				type: "object",
-				properties: {
-					currency: {
-						type: "string",
-						format: "date-time",
-						nullable: true,
-						description: "Last currency data update timestamp",
-						example: "2025-11-07T07:06:10.544Z",
-					},
-					metal: {
-						type: "string",
-						format: "date-time",
-						nullable: true,
-						description: "Last metal data update timestamp",
-						example: "2025-11-07T07:06:07.016Z",
-					},
-				},
-				required: ["currency", "metal"],
-			},
-			CryptoTimestamps: {
-				type: "object",
-				properties: {
-					currency: {
-						type: "string",
-						format: "date-time",
-						nullable: true,
-						description: "Last currency data update timestamp",
-						example: "2025-11-07T07:06:10.544Z",
-					},
-					crypto: {
-						type: "string",
-						format: "date-time",
-						nullable: true,
-						description: "Last cryptocurrency data update timestamp",
-						example: "2025-11-07T07:06:05.123Z",
-					},
-				},
-				required: ["currency", "crypto"],
-			},
-			StockTimestamps: {
-				type: "object",
-				properties: {
-					currency: {
-						type: "string",
-						format: "date-time",
-						nullable: true,
-						description: "Last currency data update timestamp",
-						example: "2025-11-07T07:06:10.544Z",
-					},
-					stock: {
-						type: "string",
-						format: "date-time",
-						nullable: true,
-						description: "Last stock data update timestamp",
-						example: "2025-11-07T07:06:05.123Z",
-					},
-				},
-				required: ["currency", "stock"],
-			},
-			AssetTimestamps: {
-				type: "object",
-				properties: {
-					currency: {
-						type: "string",
-						format: "date-time",
-						nullable: true,
-						description: "Last currency data update timestamp",
-						example: "2025-11-07T07:06:10.544Z",
-					},
-					metal: {
-						type: "string",
-						format: "date-time",
-						nullable: true,
-						description: "Last metal data update timestamp",
-						example: "2025-11-07T07:06:07.016Z",
-					},
-					crypto: {
-						type: "string",
-						format: "date-time",
-						nullable: true,
-						description: "Last cryptocurrency data update timestamp",
-						example: "2025-11-07T07:06:05.123Z",
-					},
-					stock: {
-						type: "string",
-						format: "date-time",
-						nullable: true,
-						description: "Last stock data update timestamp",
-						example: "2025-11-07T07:06:05.123Z",
-					},
-				},
-				required: ["currency", "metal", "crypto", "stock"],
-			},
-		},
-		responses: {},
-		parameters: {
-			AssetParameter: {
-				name: "asset",
-				in: "path",
-				required: true,
-				description: "Currency or metal code",
-				schema: {
-					type: "string",
-					example: "EUR",
-				},
-			},
-			CryptoAssetParameter: {
-				name: "asset",
-				in: "path",
-				required: true,
-				description: "Currency, metal, or cryptocurrency code",
-				schema: {
-					type: "string",
-					example: "BTC",
-				},
-			},
-			StockAssetParameter: {
-				name: "asset",
-				in: "path",
-				required: true,
-				description: "Currency or stock symbol",
-				schema: {
-					type: "string",
-					example: "MSFT",
-				},
-			},
-		},
-		examples: {
-			USDBaseRates: {
-				summary: "USD base rates example",
-				value: {
-					base: "USD",
-					rates: {
-						USD: 1,
-						EUR: 0.86702,
-						JPY: 153.4793,
-						GBP: 0.7624,
-						CHF: 0.80776,
-					},
-					timestamps: {
-						currency: "2025-11-07T07:06:10.544Z",
-					},
-				},
-			},
-			GoldBaseRates: {
-				summary: "Gold base rates example",
-				value: {
-					base: "GOLD",
-					rates: {
-						USD: 128.8432,
-						EUR: 111.7092,
-						JPY: 19774.7612,
-						GBP: 98.2304,
-						GOLD: 1,
-						SILVER: 82.2438,
-						PLATINUM: 2.5778,
-					},
-					timestamps: {
-						currency: "2025-11-07T07:06:10.544Z",
-						metal: "2025-11-07T07:06:07.016Z",
-					},
-				},
-			},
-			USDCryptoRates: {
-				summary: "USD base cryptocurrency rates example",
-				value: {
-					base: "USD",
-					rates: {
-						USD: 1,
-						EUR: 0.86702,
-						BTC: 0.000015,
-						ETH: 0.00023,
-						SOL: 0.0056,
-						ADA: 1.2345,
-						XRP: 2.5678,
-						DOT: 0.089,
-					},
-					timestamps: {
-						currency: "2025-11-07T07:06:10.544Z",
-						crypto: "2025-11-07T07:06:05.123Z",
-					},
-				},
-			},
-			USDStockRates: {
-				summary: "USD base stock rates example",
-				value: {
-					base: "USD",
-					rates: {
-						VOW3d: 0.01227,
-						NET: 0.004275,
-						MSFT: 0.0020088,
-						ASMLa: 0.0013276,
-						V: 0.0029717,
-						UBNT: 0.0016181,
-					},
-					timestamps: {
-						currency: "2025-11-07T07:06:10.544Z",
-						stock: "2025-11-07T07:06:05.123Z",
-					},
-				},
-			},
-			BTCCryptoRates: {
-				summary: "BTC base cryptocurrency rates example",
-				value: {
-					base: "BTC",
-					rates: {
-						USD: 65000,
-						EUR: 56355,
-						BTC: 1,
-						ETH: 15.333,
-						SOL: 373.333,
-						ADA: 82233.333,
-					},
-					timestamps: {
-						currency: "2025-11-07T07:06:10.544Z",
-						crypto: "2025-11-07T07:06:05.123Z",
-					},
-				},
-			},
-			NETStockRates: {
-				summary: "NET base stock rates example",
-				value: {
-					base: "NET",
-					rates: {
-						USD: 233.92,
-						EUR: 202.75,
-						NET: 1,
-						MSFT: 0.47,
-						V: 0.695,
-					},
-					timestamps: {
-						currency: "2025-11-07T07:06:10.544Z",
-						stock: "2025-11-07T07:06:05.123Z",
-					},
-				},
-			},
-			AssetsList: {
-				summary: "Supported assets example",
-				value: {
-					currencies: ["AED", "AFN", "ALL", "AMD", "ANG", "AOA", "ARS", "AUD", "EUR", "USD", "GBP", "JPY", "CHF", "CAD"],
-					metals: ["GOLD", "SILVER", "PALLADIUM", "COPPER"],
-					cryptocurrencies: ["BTC", "ETH", "SOL", "ADA", "XRP", "DOT", "DOGE", "AVAX", "LINK"],
-					stocks: ["VOW3d", "NET", "MSFT", "ASMLa", "V", "UBNT", "SMSDl", "FB"],
-					timestamps: {
-						currency: "2025-11-07T07:06:10.544Z",
-						metal: "2025-11-07T07:06:07.016Z",
-						crypto: "2025-11-07T07:06:05.123Z",
-						stock: "2025-11-07T07:06:05.123Z",
-					},
+					error: { type: "string", example: "History service is not enabled" },
 				},
 			},
 		},
