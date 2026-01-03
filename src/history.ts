@@ -200,7 +200,7 @@ export class HistoryService {
 	}
 
 	/**
-	 * Get hourly prices for a symbol (last 30 days - all data from hourly table)
+	 * Get hourly prices for a symbol (last 90 days - all data from hourly table)
 	 */
 	async getHourlyHistory(symbol: string, assetType: AssetType, base: string = "USD"): Promise<HistoryResponse> {
 		if (!this.recordingEnabled) {

@@ -91,7 +91,7 @@ export class ClickHouseWrapper {
 			`,
 		});
 
-		// Hourly aggregated prices - kept for 30 days
+		// Hourly aggregated prices - kept for 90 days
 		// Populated by aggregation job from prices_raw after each hour completes
 		await this.client.command({
 			query: `
@@ -112,7 +112,7 @@ export class ClickHouseWrapper {
 				ENGINE = ReplacingMergeTree(sample_count)
 				PARTITION BY toYYYYMM(hour)
 				ORDER BY (asset_type, symbol, hour)
-				TTL hour + INTERVAL 30 DAY
+				TTL hour + INTERVAL 90 DAY
 				SETTINGS index_granularity = 8192
 			`,
 		});
@@ -215,7 +215,7 @@ export class ClickHouseWrapper {
 	}
 
 	/**
-	 * Get ALL hourly prices for a symbol (last 30 days)
+	 * Get ALL hourly prices for a symbol (last 90 days)
 	 * Reads from prices_hourly table (populated by aggregation job)
 	 * Falls back to prices_raw for current incomplete hour
 	 */

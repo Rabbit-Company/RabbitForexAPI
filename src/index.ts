@@ -297,7 +297,7 @@ app.get("/v1/rates/history/:symbol", async (c) => {
 	}
 });
 
-// Currency history - hourly (last 30 days)
+// Currency history - hourly (last 90 days)
 app.get("/v1/rates/history/:symbol/hourly", async (c) => {
 	httpRequests.labels({ endpoint: "/v1/rates/history/:symbol/hourly" }).inc();
 
@@ -351,7 +351,7 @@ app.get("/v1/metals/history/:symbol", async (c) => {
 	}
 });
 
-// Metal history - hourly (last 30 days)
+// Metal history - hourly (last 90 days)
 app.get("/v1/metals/history/:symbol/hourly", async (c) => {
 	httpRequests.labels({ endpoint: "/v1/metals/history/:symbol/hourly" }).inc();
 
@@ -405,7 +405,7 @@ app.get("/v1/crypto/history/:symbol", async (c) => {
 	}
 });
 
-// Crypto history - hourly (last 30 days)
+// Crypto history - hourly (last 90 days)
 app.get("/v1/crypto/history/:symbol/hourly", async (c) => {
 	httpRequests.labels({ endpoint: "/v1/crypto/history/:symbol/hourly" }).inc();
 
@@ -459,7 +459,7 @@ app.get("/v1/stocks/history/:symbol", async (c) => {
 	}
 });
 
-// Stock history - hourly (last 30 days)
+// Stock history - hourly (last 90 days)
 app.get("/v1/stocks/history/:symbol/hourly", async (c) => {
 	httpRequests.labels({ endpoint: "/v1/stocks/history/:symbol/hourly" }).inc();
 
@@ -527,20 +527,20 @@ Logger.info("  GET /v1/assets                        - List all supported assets
 Logger.info("  GET /v1/rates                         - Currency rates (USD base)");
 Logger.info("  GET /v1/rates/:base                   - Currency rates (custom base)");
 Logger.info("  GET /v1/rates/history/:symbol         - Currency history (raw, last 24h)");
-Logger.info("  GET /v1/rates/history/:symbol/hourly  - Currency history (hourly, last 30d)");
+Logger.info("  GET /v1/rates/history/:symbol/hourly  - Currency history (hourly, last 90d)");
 Logger.info("  GET /v1/rates/history/:symbol/daily   - Currency history (daily, all time)");
 Logger.info("  GET /v1/metals/rates                  - Metal rates (USD base)");
 Logger.info("  GET /v1/metals/rates/:base            - Metal rates (custom base)");
 Logger.info("  GET /v1/metals/history/:symbol        - Metal history (raw, last 24h)");
-Logger.info("  GET /v1/metals/history/:symbol/hourly - Metal history (hourly, last 30d)");
+Logger.info("  GET /v1/metals/history/:symbol/hourly - Metal history (hourly, last 90d)");
 Logger.info("  GET /v1/metals/history/:symbol/daily  - Metal history (daily, all time)");
 Logger.info("  GET /v1/crypto/rates                  - Crypto rates (USD base)");
 Logger.info("  GET /v1/crypto/rates/:base            - Crypto rates (custom base)");
 Logger.info("  GET /v1/crypto/history/:symbol        - Crypto history (raw, last 24h)");
-Logger.info("  GET /v1/crypto/history/:symbol/hourly - Crypto history (hourly, last 30d)");
+Logger.info("  GET /v1/crypto/history/:symbol/hourly - Crypto history (hourly, last 90d)");
 Logger.info("  GET /v1/crypto/history/:symbol/daily  - Crypto history (daily, all time)");
 Logger.info("  GET /v1/stocks/rates                  - Stock rates (USD base)");
 Logger.info("  GET /v1/stocks/rates/:base            - Stock rates (custom base)");
 Logger.info("  GET /v1/stocks/history/:symbol        - Stock history (raw, last 24h)");
-Logger.info("  GET /v1/stocks/history/:symbol/hourly - Stock history (hourly, last 30d)");
+Logger.info("  GET /v1/stocks/history/:symbol/hourly - Stock history (hourly, last 90d)");
 Logger.info("  GET /v1/stocks/history/:symbol/daily  - Stock history (daily, all time)");

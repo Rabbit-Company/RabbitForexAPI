@@ -77,8 +77,8 @@ export const openapi = {
 		"/v1/rates/history/{symbol}/hourly": {
 			get: {
 				tags: ["History"],
-				summary: "Get currency hourly history (last 30 days)",
-				description: "Returns hourly aggregated price data from the last 30 days",
+				summary: "Get currency hourly history (last 90 days)",
+				description: "Returns hourly aggregated price data from the last 90 days",
 				operationId: "getCurrencyHourlyHistory",
 				parameters: [{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "EUR" } }],
 				responses: {
@@ -133,7 +133,7 @@ export const openapi = {
 		"/v1/metals/history/{symbol}/hourly": {
 			get: {
 				tags: ["History"],
-				summary: "Get metal hourly history (last 30 days)",
+				summary: "Get metal hourly history (last 90 days)",
 				operationId: "getMetalHourlyHistory",
 				parameters: [{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "GOLD" } }],
 				responses: {
@@ -187,7 +187,7 @@ export const openapi = {
 		"/v1/crypto/history/{symbol}/hourly": {
 			get: {
 				tags: ["History"],
-				summary: "Get crypto hourly history (last 30 days)",
+				summary: "Get crypto hourly history (last 90 days)",
 				operationId: "getCryptoHourlyHistory",
 				parameters: [{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "BTC" } }],
 				responses: {
@@ -241,7 +241,7 @@ export const openapi = {
 		"/v1/stocks/history/{symbol}/hourly": {
 			get: {
 				tags: ["History"],
-				summary: "Get stock hourly history (last 30 days)",
+				summary: "Get stock hourly history (last 90 days)",
 				operationId: "getStockHourlyHistory",
 				parameters: [{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "MSFT" } }],
 				responses: {

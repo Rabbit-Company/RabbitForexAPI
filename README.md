@@ -256,7 +256,7 @@ Example: `/v1/rates/history/EUR`
 
 ### GET `/v1/rates/history/:symbol/hourly`
 
-Get hourly aggregated price history for a currency (last 30 days)
+Get hourly aggregated price history for a currency (last 90 days)
 
 Example: `/v1/rates/history/EUR/hourly`
 
@@ -387,7 +387,7 @@ Example: `/v1/metals/history/GOLD`
 
 ### GET `/v1/metals/history/:symbol/hourly`
 
-Get hourly aggregated price history for a metal (last 30 days)
+Get hourly aggregated price history for a metal (last 90 days)
 
 Example: `/v1/metals/history/GOLD/hourly`
 
@@ -526,7 +526,7 @@ Example: `/v1/crypto/history/BTC`
 
 ### GET `/v1/crypto/history/:symbol/hourly`
 
-Get hourly aggregated price history for a cryptocurrency (last 30 days)
+Get hourly aggregated price history for a cryptocurrency (last 90 days)
 
 Example: `/v1/crypto/history/BTC/hourly`
 
@@ -672,7 +672,7 @@ Example: `/v1/stocks/history/NET`
 
 ### GET `/v1/stocks/history/:symbol/hourly`
 
-Get hourly aggregated price history for a stock (last 30 days)
+Get hourly aggregated price history for a stock (last 90 days)
 
 Example: `/v1/stocks/history/NET/hourly`
 
@@ -748,7 +748,7 @@ The API supports historical price data storage and retrieval using ClickHouse. W
 | Resolution | Endpoint Suffix | Data Retention | Cache TTL  |
 | ---------- | --------------- | -------------- | ---------- |
 | Raw        | (none)          | 1 day          | 30 seconds |
-| Hourly     | `/hourly`       | 30 days        | 5 minutes  |
+| Hourly     | `/hourly`       | 90 days        | 5 minutes  |
 | Daily      | `/daily`        | Forever        | 1 hour     |
 
 ### Aggregation
