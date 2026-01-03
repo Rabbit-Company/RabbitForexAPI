@@ -75,20 +75,18 @@ export interface PricePoint {
 }
 
 export interface RawPriceRecord {
-	symbol: string;
-	price: number;
 	timestamp: string;
+	price: number;
 }
 
 export interface AggregatedPriceRecord {
-	symbol: string;
+	timestamp: string;
+	avg: number;
 	min: number;
 	max: number;
-	avg: number;
 	open: number;
 	close: number;
 	sampleCount: number;
-	timestamp: string;
 }
 
 export interface HistoryResponse {

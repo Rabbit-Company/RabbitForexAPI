@@ -187,9 +187,8 @@ export class HistoryService {
 		const rawData = await this.clickhouse.getAllRawPrices(symbol, assetType);
 
 		const data: RawPriceRecord[] = rawData.map((r) => ({
-			symbol: r.symbol,
-			price: this.roundPrice(r.price_usd * conversionRate),
 			timestamp: r.timestamp,
+			price: this.roundPrice(r.price_usd * conversionRate),
 		}));
 
 		return {
@@ -212,14 +211,13 @@ export class HistoryService {
 		const hourlyData = await this.clickhouse.getAllHourlyPrices(symbol, assetType);
 
 		const data: AggregatedPriceRecord[] = hourlyData.map((r) => ({
-			symbol: r.symbol,
+			timestamp: r.hour,
+			avg: this.roundPrice(r.price_avg * conversionRate),
 			min: this.roundPrice(r.price_min * conversionRate),
 			max: this.roundPrice(r.price_max * conversionRate),
-			avg: this.roundPrice(r.price_avg * conversionRate),
 			open: this.roundPrice(r.price_open * conversionRate),
 			close: this.roundPrice(r.price_close * conversionRate),
 			sampleCount: r.sample_count,
-			timestamp: r.hour,
 		}));
 
 		return {
@@ -242,14 +240,13 @@ export class HistoryService {
 		const dailyData = await this.clickhouse.getAllDailyPrices(symbol, assetType);
 
 		const data: AggregatedPriceRecord[] = dailyData.map((r) => ({
-			symbol: r.symbol,
+			timestamp: r.date,
+			avg: this.roundPrice(r.price_avg * conversionRate),
 			min: this.roundPrice(r.price_min * conversionRate),
 			max: this.roundPrice(r.price_max * conversionRate),
-			avg: this.roundPrice(r.price_avg * conversionRate),
 			open: this.roundPrice(r.price_open * conversionRate),
 			close: this.roundPrice(r.price_close * conversionRate),
 			sampleCount: r.sample_count,
-			timestamp: r.date,
 		}));
 
 		return {

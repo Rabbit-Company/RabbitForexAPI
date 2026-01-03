@@ -366,9 +366,8 @@ export const openapi = {
 						items: {
 							type: "object",
 							properties: {
-								symbol: { type: "string", example: "BTC" },
-								price: { type: "number", example: 97500.1234 },
 								timestamp: { type: "string", format: "date-time" },
+								price: { type: "number", example: 97500.1234 },
 							},
 						},
 					},
@@ -385,14 +384,13 @@ export const openapi = {
 						items: {
 							type: "object",
 							properties: {
-								symbol: { type: "string", example: "BTC" },
+								timestamp: { type: "string", example: "2024-01-15T12:00:00Z" },
+								avg: { type: "number", example: 97500 },
 								min: { type: "number", example: 96000 },
 								max: { type: "number", example: 99000 },
-								avg: { type: "number", example: 97500 },
 								open: { type: "number", example: 96500 },
 								close: { type: "number", example: 98000 },
 								sampleCount: { type: "integer", example: 120 },
-								timestamp: { type: "string", example: "2024-01-15T12:00:00Z" },
 							},
 						},
 					},
