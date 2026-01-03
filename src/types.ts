@@ -63,3 +63,35 @@ export interface MetalRatesResponse {
 		currency: string | null;
 	};
 }
+
+export type AssetType = "currency" | "metal" | "crypto" | "stock";
+export type Resolution = "raw" | "hourly" | "daily";
+
+export interface PricePoint {
+	symbol: string;
+	assetType: AssetType;
+	priceUsd: number;
+	timestamp: Date;
+}
+
+export interface RawPriceRecord {
+	timestamp: string;
+	price: number;
+}
+
+export interface AggregatedPriceRecord {
+	timestamp: string;
+	avg: number;
+	min: number;
+	max: number;
+	open: number;
+	close: number;
+	sampleCount: number;
+}
+
+export interface HistoryResponse {
+	symbol: string;
+	base: string;
+	resolution: Resolution;
+	data: RawPriceRecord[] | AggregatedPriceRecord[];
+}

@@ -2,6 +2,7 @@ import { CryptoExchange } from "./crypto";
 import { Logger } from "./logger";
 import { MetalExchange } from "./metals";
 import { StockExchange } from "./stock";
+import { historyService } from "./history";
 import type { ExchangeRates, MetalData, StockData } from "./types";
 
 interface WiseRate {
@@ -54,6 +55,9 @@ export class Exchange {
 		await this.stockExchange.initialize();
 		await this.metalExchange.initialize();
 		await this.updateRates();
+
+		await historyService.initialize(this);
+
 		this.startPeriodicUpdate();
 	}
 
@@ -64,6 +68,10 @@ export class Exchange {
 			await this.updateCryptoRates();
 			await this.updateStockRates();
 			this.lastUpdate = new Date();
+
+			if (historyService.isEnabled()) {
+				await historyService.recordCurrentPrices();
+			}
 		} catch (err: any) {
 			Logger.error("[Exchange] Failed to update exchange rates:", err);
 			throw err;
@@ -357,7 +365,7 @@ export class Exchange {
 		}, this.updateInterval * 1000);
 	}
 
-	stop(): void {
+	async stop(): Promise<void> {
 		if (this.intervalId) {
 			clearInterval(this.intervalId);
 			this.intervalId = null;
@@ -365,6 +373,8 @@ export class Exchange {
 		this.cryptoExchange.stop();
 		this.stockExchange.stop();
 		this.metalExchange.stop();
+
+		await historyService.stop();
 	}
 
 	convert(amount: number, from: string, to: string): number | undefined {

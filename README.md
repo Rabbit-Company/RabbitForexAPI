@@ -11,9 +11,10 @@ A high-performance foreign exchange (Forex), precious metals, stocks, and crypto
 - 🌍 Multi-currency Support - Convert between 150+ currencies with accurate cross-rates
 - 🥇 Metals - Gold, Silver, Palladium, Copper
 - 📊 Wise - Reliable source for exchange rates
+- 📜 Historical Data - Store and query historical prices with ClickHouse (raw, hourly, daily aggregates)
 - 🔄 Smart Price Aggregation - Combines multiple crypto exchanges for optimal pricing with outlier detection
 - 🐳 Docker Ready - Easy deployment with Docker and Docker Compose
-- 🏥 Health Checks - Built-in monitoring and health endpoints
+- 🥐 Health Checks - Built-in monitoring and health endpoints
 - 🔄 Auto-restart - Automatic recovery on failures
 - 📈 Smart Caching - Efficient cache control headers for optimal performance
 
@@ -92,6 +93,21 @@ OPEN_METRICS_ENABLED=false
 # Set to "none" to disable authentication (not recommended for production)
 # Default: none
 OPEN_METRICS_AUTH_TOKEN=none
+
+# Enable/disable history recording
+HISTORY_ENABLED=true
+
+# ClickHouse Connection
+CLICKHOUSE_HOST=clickhouse
+CLICKHOUSE_PORT=8123
+CLICKHOUSE_DATABASE=rabbitforex
+CLICKHOUSE_USERNAME=rabbitforex_user
+CLICKHOUSE_PASSWORD=rabbitforex_password
+
+# ClickHouse Performance Settings
+CLICKHOUSE_COMPRESSION=true
+CLICKHOUSE_MAX_CONNECTIONS=10
+CLICKHOUSE_TIMEOUT=30000
 ```
 
 ### Running with Docker Compose
@@ -135,7 +151,8 @@ Health Check and Statistics
 		"cryptoCount": 2886,
 		"stockCount": 23,
 		"totalAssetCount": 3075,
-		"updateInterval": "30s"
+		"updateInterval": "30s",
+		"historyEnabled": true
 	},
 	"httpStats": {
 		"pendingRequests": 1
@@ -213,6 +230,80 @@ Example: `/v1/rates/EUR` - Euro as base
 }
 ```
 
+### GET `/v1/rates/history/:symbol`
+
+Get raw price history for a currency (last 24 hours)
+
+Example: `/v1/rates/history/EUR`
+
+```json
+{
+	"symbol": "EUR",
+	"base": "USD",
+	"resolution": "raw",
+	"data": [
+		{
+			"timestamp": "2025-11-07T06:30:00.000Z",
+			"price": 1.0892
+		},
+		{
+			"timestamp": "2025-11-07T06:30:30.000Z",
+			"price": 1.0895
+		}
+	]
+}
+```
+
+### GET `/v1/rates/history/:symbol/hourly`
+
+Get hourly aggregated price history for a currency (last 90 days)
+
+Example: `/v1/rates/history/EUR/hourly`
+
+```json
+{
+	"symbol": "EUR",
+	"base": "USD",
+	"resolution": "hourly",
+	"data": [
+		{
+			"timestamp": "2025-11-07T06:00:00Z",
+			"avg": 1.0898,
+			"min": 1.0885,
+			"max": 1.0912,
+			"open": 1.0892,
+			"close": 1.0905,
+			"sampleCount": 120
+		}
+	]
+}
+```
+
+### GET `/v1/rates/history/:symbol/daily`
+
+Get daily aggregated price history for a currency (all time)
+
+Example: `/v1/rates/history/EUR/daily`
+
+```json
+{
+	"symbol": "EUR",
+	"base": "USD",
+	"resolution": "daily",
+	"data": [
+		{
+			"timestamp": "2025-11-07",
+			"avg": 1.09,
+			"min": 1.085,
+			"max": 1.095,
+			"open": 1.0875,
+			"close": 1.092,
+			"sampleCount": 2880
+		}
+	]
+}
+```
+
 ### GET `/v1/metals/rates`
 
 Get all metal rates with USD as base (default)
@@ -271,6 +362,76 @@ Example: `/v1/metals/rates/EUR` - Euro as base
 		"currency": "2025-11-09T21:00:31.465Z",
 		"metal": "2025-11-09T21:00:31.153Z"
 	}
+}
+```
+
+### GET `/v1/metals/history/:symbol`
+
+Get raw price history for a metal (last 24 hours)
+
+Example: `/v1/metals/history/GOLD`
+
+```json
+{
+	"symbol": "GOLD",
+	"base": "USD",
+	"resolution": "raw",
+	"data": [
+		{
+			"timestamp": "2025-11-07T06:30:00.000Z",
+			"price": 4332.32
+		}
+	]
+}
+```
+
+### GET `/v1/metals/history/:symbol/hourly`
+
+Get hourly aggregated price history for a metal (last 90 days)
+
+Example: `/v1/metals/history/GOLD/hourly`
+
+```json
+{
+	"symbol": "GOLD",
+	"base": "USD",
+	"resolution": "hourly",
+	"data": [
+		{
+			"timestamp": "2025-11-07T06:00:00Z",
+			"avg": 4332.32,
+			"min": 4246.65,
+			"max": 4374.73,
+			"open": 4314.41,
+			"close": 4353.63,
+			"sampleCount": 120
+		}
+	]
+}
+```
+
+### GET `/v1/metals/history/:symbol/daily`
+
+Get daily aggregated price history for a metal (all time)
+
+Example: `/v1/metals/history/GOLD/daily`
+
+```json
+{
+	"symbol": "GOLD",
+	"base": "USD",
+	"resolution": "daily",
+	"data": [
+		{
+			"timestamp": "2025-11-07",
+			"avg": 4332.32,
+			"min": 4246.65,
+			"max": 4374.73,
+			"open": 4314.41,
+			"close": 4353.63,
+			"sampleCount": 2880
+		}
+	]
 }
 ```
 
@@ -336,6 +497,80 @@ Example: `/v1/crypto/rates/EUR` - Euro as base for crypto rates
 		"currency": "2025-11-07T07:06:10.544Z",
 		"crypto": "2025-11-07T07:06:05.123Z"
 	}
+}
+```
+
+### GET `/v1/crypto/history/:symbol`
+
+Get raw price history for a cryptocurrency (last 24 hours)
+
+Example: `/v1/crypto/history/BTC`
+
+```json
+{
+	"symbol": "BTC",
+	"base": "USD",
+	"resolution": "raw",
+	"data": [
+		{
+			"timestamp": "2025-11-07T06:30:00.000Z",
+			"price": 97500.1234
+		},
+		{
+			"timestamp": "2025-11-07T06:30:30.000Z",
+			"price": 97520.5678
+		}
+	]
+}
+```
+
+### GET `/v1/crypto/history/:symbol/hourly`
+
+Get hourly aggregated price history for a cryptocurrency (last 90 days)
+
+Example: `/v1/crypto/history/BTC/hourly`
+
+```json
+{
+	"symbol": "BTC",
+	"base": "USD",
+	"resolution": "hourly",
+	"data": [
+		{
+			"timestamp": "2025-11-07T06:00:00Z",
+			"avg": 97500.0,
+			"min": 96000.0,
+			"max": 99000.0,
+			"open": 96500.0,
+			"close": 98000.0,
+			"sampleCount": 120
+		}
+	]
+}
+```
+
+### GET `/v1/crypto/history/:symbol/daily`
+
+Get daily aggregated price history for a cryptocurrency (all time)
+
+Example: `/v1/crypto/history/BTC/daily`
+
+```json
+{
+	"symbol": "BTC",
+	"base": "USD",
+	"resolution": "daily",
+	"data": [
+		{
+			"timestamp": "2025-11-07",
+			"avg": 97500.0,
+			"min": 95000.0,
+			"max": 100000.0,
+			"open": 96000.0,
+			"close": 99000.0,
+			"sampleCount": 2880
+		}
+	]
 }
 ```
 
@@ -411,6 +646,80 @@ Example: `/v1/stocks/rates/EUR` - Euro as base for stock rates
 }
 ```
 
+### GET `/v1/stocks/history/:symbol`
+
+Get raw price history for a stock (last 24 hours)
+
+Example: `/v1/stocks/history/NET`
+
+```json
+{
+	"symbol": "NET",
+	"base": "USD",
+	"resolution": "raw",
+	"data": [
+		{
+			"timestamp": "2025-11-07T06:30:00.000Z",
+			"price": 196.1853
+		},
+		{
+			"timestamp": "2025-11-07T06:30:30.000Z",
+			"price": 198.9521
+		}
+	]
+}
+```
+
+### GET `/v1/stocks/history/:symbol/hourly`
+
+Get hourly aggregated price history for a stock (last 90 days)
+
+Example: `/v1/stocks/history/NET/hourly`
+
+```json
+{
+	"symbol": "NET",
+	"base": "USD",
+	"resolution": "hourly",
+	"data": [
+		{
+			"timestamp": "2025-11-07T06:00:00Z",
+			"avg": 197.1243,
+			"min": 184.5493,
+			"max": 210.4347,
+			"open": 186.9825,
+			"close": 205.7362,
+			"sampleCount": 120
+		}
+	]
+}
+```
+
+### GET `/v1/stocks/history/:symbol/daily`
+
+Get daily aggregated price history for a stock (all time)
+
+Example: `/v1/stocks/history/NET/daily`
+
+```json
+{
+	"symbol": "NET",
+	"base": "USD",
+	"resolution": "daily",
+	"data": [
+		{
+			"timestamp": "2025-11-07",
+			"avg": 197.1243,
+			"min": 184.5493,
+			"max": 210.4347,
+			"open": 186.9825,
+			"close": 205.7362,
+			"sampleCount": 2880
+		}
+	]
+}
+```
+
 ### GET `/v1/assets`
 
 Get lists of all supported currencies, metals and cryptocurrencies
@@ -429,6 +738,42 @@ Get lists of all supported currencies, metals and cryptocurrencies
 	}
 }
 ```
+
+## Historical Data
+
+The API supports historical price data storage and retrieval using ClickHouse. When `HISTORY_ENABLED=true`, prices are recorded and aggregated at multiple resolutions.
+
+### Data Retention
+
+| Resolution | Endpoint Suffix | Data Retention | Cache TTL  |
+| ---------- | --------------- | -------------- | ---------- |
+| Raw        | (none)          | 1 day          | 30 seconds |
+| Hourly     | `/hourly`       | 90 days        | 5 minutes  |
+| Daily      | `/daily`        | Forever        | 1 hour     |
+
+### Aggregation
+
+An aggregation job runs every 10 minutes to compute:
+
+- **Hourly aggregates**: From raw data after each hour completes
+- **Daily aggregates**: From hourly data after each day completes
+
+### Response Fields
+
+**Raw data** includes:
+
+- `price` - The price at that moment
+- `timestamp` - ISO 8601 timestamp
+
+**Aggregated data** (hourly/daily) includes:
+
+- `timestamp` - Period start time
+- `avg` - Average price in the period
+- `min` - Minimum price in the period
+- `max` - Maximum price in the period
+- `open` - Opening price (first price)
+- `close` - Closing price (last price)
+- `sampleCount` - Number of data points
 
 ## Supported Assets
 
