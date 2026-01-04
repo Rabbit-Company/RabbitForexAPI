@@ -185,6 +185,12 @@ const CURRENCY_SYMBOLS = {
 	ZWL: "$",
 };
 
+const PRICE_DIRECTION = {
+	UNCHANGED: 0,
+	UP: 1,
+	DOWN: -1,
+};
+
 const RabbitForexIndicator = GObject.registerClass(
 	class RabbitForexIndicator extends PanelMenu.Button {
 		_init(extension) {
@@ -195,7 +201,10 @@ const RabbitForexIndicator = GObject.registerClass(
 			this._httpSession = new Soup.Session();
 			this._rates = {};
 			this._timestamps = {};
+			this._previousRates = {};
+			this._referenceRates = {};
 			this._updateTimeout = null;
+			this._historyFetchTimeout = null;
 
 			// Create the panel button layout
 			this._box = new St.BoxLayout({
@@ -221,6 +230,7 @@ const RabbitForexIndicator = GObject.registerClass(
 
 			this._fetchAllRates();
 			this._startUpdateTimer();
+			this._fetchHistoricalRatesIfNeeded();
 		}
 
 		_getEndpoints() {
@@ -231,6 +241,29 @@ const RabbitForexIndicator = GObject.registerClass(
 				crypto: `${API_BASE}/crypto/rates/${primaryCurrency}`,
 				stocks: `${API_BASE}/stocks/rates/${primaryCurrency}`,
 			};
+		}
+
+		_getHistoryEndpoint(category, symbol) {
+			const primaryCurrency = this._settings.get_string("primary-currency");
+			const mode = this._settings.get_string("price-change-mode");
+
+			let resolution = "";
+			if (mode === "day-start" || mode === "day-ago") {
+				resolution = "/hourly";
+			}
+
+			switch (category) {
+				case "fiat":
+					return `${API_BASE}/rates/history/${symbol}${resolution}`;
+				case "metals":
+					return `${API_BASE}/metals/history/${symbol}/currency/${primaryCurrency}${resolution}`;
+				case "crypto":
+					return `${API_BASE}/crypto/history/${symbol}/currency/${primaryCurrency}${resolution}`;
+				case "stocks":
+					return `${API_BASE}/stocks/history/${symbol}/currency/${primaryCurrency}${resolution}`;
+				default:
+					return null;
+			}
 		}
 
 		_getWatchedCategory(category) {
@@ -262,6 +295,7 @@ const RabbitForexIndicator = GObject.registerClass(
 			const refreshItem = new PopupMenu.PopupMenuItem("🔄 Refresh Now");
 			refreshItem.connect("activate", () => {
 				this._fetchAllRates();
+				this._fetchHistoricalRatesIfNeeded();
 			});
 			this.menu.addMenuItem(refreshItem);
 
@@ -292,12 +326,50 @@ const RabbitForexIndicator = GObject.registerClass(
 			});
 		}
 
+		_startHistoryFetchTimer() {
+			if (this._historyFetchTimeout) {
+				GLib.source_remove(this._historyFetchTimeout);
+				this._historyFetchTimeout = null;
+			}
+
+			const mode = this._settings.get_string("price-change-mode");
+			if (mode === "none" || mode === "previous-update") {
+				return;
+			}
+
+			// Fetch historical data every 5 minutes for hour-ago mode
+			// and every 15 minutes for day modes
+			const interval = mode === "hour-ago" ? 300 : 900;
+
+			this._historyFetchTimeout = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, interval, () => {
+				this._fetchHistoricalRatesIfNeeded();
+				return GLib.SOURCE_CONTINUE;
+			});
+		}
+
 		_onSettingsChanged() {
 			this._startUpdateTimer();
+			this._startHistoryFetchTimer();
 			this._fetchAllRates();
+			this._fetchHistoricalRatesIfNeeded();
 		}
 
 		async _fetchAllRates() {
+			// Store current rates as previous before fetching new ones
+			const mode = this._settings.get_string("price-change-mode");
+			if (mode === "previous-update") {
+				for (const category of CATEGORIES) {
+					if (this._rates[category]) {
+						if (!this._previousRates[category]) {
+							this._previousRates[category] = {};
+						}
+						for (const symbol of Object.keys(this._rates[category])) {
+							this._previousRates[category][symbol] = this._rates[category][symbol];
+						}
+					}
+				}
+			}
+
 			for (const category of CATEGORIES) {
 				if (this._hasWatchedItems(category)) {
 					await this._fetchRates(category);
@@ -345,6 +417,187 @@ const RabbitForexIndicator = GObject.registerClass(
 			}
 		}
 
+		async _fetchHistoricalRatesIfNeeded() {
+			const mode = this._settings.get_string("price-change-mode");
+
+			if (mode === "none" || mode === "previous-update") {
+				return;
+			}
+
+			for (const category of CATEGORIES) {
+				const watched = this._getWatchedCategory(category);
+				const panelSymbols = this._getPanelCategory(category);
+				const allSymbols = [...new Set([...watched, ...panelSymbols])];
+
+				for (const symbol of allSymbols) {
+					await this._fetchHistoricalRate(category, symbol);
+				}
+			}
+
+			this._updateDisplay();
+		}
+
+		async _fetchHistoricalRate(category, symbol) {
+			const url = this._getHistoryEndpoint(category, symbol);
+			if (!url) return;
+
+			try {
+				const message = Soup.Message.new("GET", url);
+
+				const bytes = await new Promise((resolve, reject) => {
+					this._httpSession.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
+						try {
+							const bytes = session.send_and_read_finish(result);
+							resolve(bytes);
+						} catch (e) {
+							reject(e);
+						}
+					});
+				});
+
+				if (message.status_code !== 200) {
+					return;
+				}
+
+				const decoder = new TextDecoder("utf-8");
+				const text = decoder.decode(bytes.get_data());
+				const data = JSON.parse(text);
+
+				const referencePrice = this._extractReferencePrice(data, category);
+				if (referencePrice !== null) {
+					if (!this._referenceRates[category]) {
+						this._referenceRates[category] = {};
+					}
+					this._referenceRates[category][symbol] = referencePrice;
+				}
+			} catch (error) {}
+		}
+
+		_extractReferencePrice(historyData, category) {
+			const mode = this._settings.get_string("price-change-mode");
+			const dataPoints = historyData.data;
+
+			if (!dataPoints || dataPoints.length === 0) {
+				return null;
+			}
+
+			const now = new Date();
+
+			if (mode === "hour-ago") {
+				// Find the data point closest to 1 hour ago
+				const targetTime = new Date(now.getTime() - 60 * 60 * 1000);
+				return this._findPriceAtOrBefore(dataPoints, targetTime, category);
+			} else if (mode === "day-start") {
+				// Find the data point for the start of today (00:00 UTC)
+				const startOfDay = new Date(now);
+				startOfDay.setUTCHours(0, 0, 0, 0);
+				return this._findPriceAtOrBefore(dataPoints, startOfDay, category);
+			} else if (mode === "day-ago") {
+				// Find the data point closest to 24 hours ago
+				const targetTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+				return this._findPriceAtOrBefore(dataPoints, targetTime, category);
+			}
+
+			return null;
+		}
+
+		_findPriceAtOrBefore(dataPoints, targetTime, category) {
+			const target = targetTime.getTime();
+
+			for (let i = dataPoints.length - 1; i >= 0; i--) {
+				const t = Date.parse(dataPoints[i].timestamp);
+				if (t <= target) {
+					const price = dataPoints[i].price ?? dataPoints[i].open ?? dataPoints[i].avg;
+					if (price === undefined) return null;
+					return category === "fiat" ? 1 / price : price;
+				}
+			}
+
+			return null;
+		}
+
+		_getPriceDirection(category, symbol, currentRate) {
+			const mode = this._settings.get_string("price-change-mode");
+
+			if (mode === "none") {
+				return PRICE_DIRECTION.UNCHANGED;
+			}
+
+			let referenceRate;
+
+			if (mode === "previous-update") {
+				referenceRate = this._previousRates[category]?.[symbol];
+			} else {
+				const referencePrice = this._referenceRates[category]?.[symbol];
+				if (referencePrice !== undefined) {
+					if (category === "fiat") {
+						referenceRate = referencePrice;
+					} else {
+						referenceRate = 1 / referencePrice;
+					}
+				}
+			}
+
+			if (referenceRate === undefined) {
+				return PRICE_DIRECTION.UNCHANGED;
+			}
+
+			const currentPrice = this._getRawPrice(currentRate, category);
+			const referencePrice = this._getRawPrice(referenceRate, category);
+
+			const epsilon = 0.0000001;
+
+			if (Math.abs(currentPrice - referencePrice) < epsilon) {
+				return PRICE_DIRECTION.UNCHANGED;
+			} else if (currentPrice > referencePrice) {
+				return PRICE_DIRECTION.UP;
+			} else {
+				return PRICE_DIRECTION.DOWN;
+			}
+		}
+
+		_getPriceChange(category, symbol, currentRate) {
+			const mode = this._settings.get_string("price-change-mode");
+
+			if (mode === "none") {
+				return { change: 0, percent: 0 };
+			}
+
+			let referenceRate;
+
+			if (mode === "previous-update") {
+				referenceRate = this._previousRates[category]?.[symbol];
+			} else {
+				const referencePrice = this._referenceRates[category]?.[symbol];
+				if (referencePrice !== undefined) {
+					if (category === "fiat") {
+						referenceRate = referencePrice;
+					} else {
+						referenceRate = 1 / referencePrice;
+					}
+				}
+			}
+
+			if (referenceRate === undefined) {
+				return { change: 0, percent: 0 };
+			}
+
+			const currentPrice = this._getRawPrice(currentRate, category);
+			const referencePrice = this._getRawPrice(referenceRate, category);
+
+			const change = currentPrice - referencePrice;
+			const percent = referencePrice !== 0 ? (change / referencePrice) * 100 : 0;
+
+			return { change, percent };
+		}
+
+		_applyTemplate(template, symbol, formattedRate, change, percent) {
+			const changeStr = this._formatNumber(Math.abs(change));
+			const percentStr = Math.abs(percent) < 0.01 ? Math.abs(percent).toFixed(4) : Math.abs(percent).toFixed(2);
+
+			return template.replace("{symbol}", symbol).replace("{rate}", formattedRate).replace("{change}", changeStr).replace("{percent}", percentStr);
+		}
+
 		_updateDisplay() {
 			this._updatePanelLabel();
 			this._updateMenuRates();
@@ -356,6 +609,8 @@ const RabbitForexIndicator = GObject.registerClass(
 			const showCurrencyInPanel = this._settings.get_boolean("show-currency-in-panel");
 			const panelSeparator = this._settings.get_string("panel-separator");
 			const panelItemTemplate = this._settings.get_string("panel-item-template");
+			const panelItemTemplateUp = this._settings.get_string("panel-item-template-up");
+			const panelItemTemplateDown = this._settings.get_string("panel-item-template-down");
 			const sortOrder = this._settings.get_string("panel-sort-order");
 
 			const allPanelItems = [];
@@ -370,8 +625,20 @@ const RabbitForexIndicator = GObject.registerClass(
 						const rate = this._rates[category][symbol];
 						const price = this._getRawPrice(rate, category);
 						const formattedRate = this._formatPanelRate(rate, category, symbol, showCurrencyInPanel);
-						const panelItem = panelItemTemplate.replace("{symbol}", symbol).replace("{rate}", formattedRate);
-						allPanelItems.push({ symbol, price, panelItem });
+						const direction = this._getPriceDirection(category, symbol, rate);
+						const { change, percent } = this._getPriceChange(category, symbol, rate);
+
+						let template;
+						if (direction === PRICE_DIRECTION.UP) {
+							template = panelItemTemplateUp;
+						} else if (direction === PRICE_DIRECTION.DOWN) {
+							template = panelItemTemplateDown;
+						} else {
+							template = panelItemTemplate;
+						}
+
+						const panelItem = this._applyTemplate(template, symbol, formattedRate, change, percent);
+						allPanelItems.push({ symbol, price, panelItem, direction });
 					}
 				}
 			}
@@ -408,6 +675,8 @@ const RabbitForexIndicator = GObject.registerClass(
 			const primaryCurrency = this._settings.get_string("primary-currency");
 			const metalsUnit = this._settings.get_string("metals-unit");
 			const menuItemTemplate = this._settings.get_string("menu-item-template");
+			const menuItemTemplateUp = this._settings.get_string("menu-item-template-up");
+			const menuItemTemplateDown = this._settings.get_string("menu-item-template-down");
 
 			let hasAnyRates = false;
 
@@ -441,9 +710,22 @@ const RabbitForexIndicator = GObject.registerClass(
 						const rate = this._rates[category][symbol];
 						const rawPrice = this._getRawPrice(rate, category);
 						const displayRate = this._formatDisplayRate(rate, category, symbol, primaryCurrency);
-						const menuItemText = menuItemTemplate.replace("{symbol}", symbol).replace("{rate}", displayRate);
+						const direction = this._getPriceDirection(category, symbol, rate);
+						const { change, percent } = this._getPriceChange(category, symbol, rate);
 
-						const rateItem = new PopupMenu.PopupMenuItem(`    ${menuItemText}`, { reactive: true });
+						let template;
+						if (direction === PRICE_DIRECTION.UP) {
+							template = menuItemTemplateUp;
+						} else if (direction === PRICE_DIRECTION.DOWN) {
+							template = menuItemTemplateDown;
+						} else {
+							template = menuItemTemplate;
+						}
+
+						const menuItemText = this._applyTemplate(template, symbol, displayRate, change, percent);
+
+						const rateItem = new PopupMenu.PopupMenuItem(`    `, { reactive: true });
+						rateItem.label.clutter_text.set_markup(`    ${menuItemText}`);
 
 						rateItem.connect("activate", () => {
 							const clipboardText = this._getClipboardText(symbol, rawPrice, displayRate, primaryCurrency, category);
@@ -456,7 +738,7 @@ const RabbitForexIndicator = GObject.registerClass(
 
 						this._ratesSection.addMenuItem(rateItem);
 					} else {
-						const menuItemText = menuItemTemplate.replace("{symbol}", symbol).replace("{rate}", "N/A");
+						const menuItemText = this._applyTemplate(menuItemTemplate, symbol, "N/A", 0, 0);
 						const rateItem = new PopupMenu.PopupMenuItem(`    ${menuItemText}`, { reactive: false });
 						this._ratesSection.addMenuItem(rateItem);
 					}
@@ -653,6 +935,11 @@ const RabbitForexIndicator = GObject.registerClass(
 				this._updateTimeout = null;
 			}
 
+			if (this._historyFetchTimeout) {
+				GLib.source_remove(this._historyFetchTimeout);
+				this._historyFetchTimeout = null;
+			}
+
 			if (this._settingsChangedId) {
 				this._settings.disconnect(this._settingsChangedId);
 				this._settingsChangedId = null;
@@ -690,10 +977,14 @@ export default class RabbitForexExtension extends Extension {
 	_addIndicator(preserveState = false) {
 		let rates = {};
 		let timestamps = {};
+		let previousRates = {};
+		let referenceRates = {};
 
 		if (preserveState && this._indicator) {
 			rates = this._indicator._rates;
 			timestamps = this._indicator._timestamps;
+			previousRates = this._indicator._previousRates;
+			referenceRates = this._indicator._referenceRates;
 			this._indicator.destroy();
 			this._indicator = null;
 		}
@@ -703,6 +994,8 @@ export default class RabbitForexExtension extends Extension {
 		if (preserveState) {
 			this._indicator._rates = rates;
 			this._indicator._timestamps = timestamps;
+			this._indicator._previousRates = previousRates;
+			this._indicator._referenceRates = referenceRates;
 		}
 
 		const position = this._settings.get_string("panel-position");

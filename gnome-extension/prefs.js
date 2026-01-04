@@ -226,6 +226,14 @@ const PANEL_POSITION_OPTIONS = [
 	{ id: "right", label: "Right" },
 ];
 
+const PRICE_CHANGE_MODES = [
+	{ id: "none", label: "Disabled" },
+	{ id: "previous-update", label: "Previous update" },
+	{ id: "hour-ago", label: "1 hour ago" },
+	{ id: "day-start", label: "Start of day" },
+	{ id: "day-ago", label: "24 hours ago" },
+];
+
 export default class RabbitForexPreferences extends ExtensionPreferences {
 	fillPreferencesWindow(window) {
 		const settings = this.getSettings();
@@ -244,7 +252,6 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		generalPage.add(currencyGroup);
 
-		// Primary currency dropdown
 		const currencyModel = new Gtk.StringList();
 		for (const currency of COMMON_FIATS) {
 			currencyModel.append(currency);
@@ -256,7 +263,6 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 			model: currencyModel,
 		});
 
-		// Set current value
 		const currentCurrency = settings.get_string("primary-currency");
 		const currencyIndex = COMMON_FIATS.indexOf(currentCurrency);
 		if (currencyIndex >= 0) {
@@ -276,7 +282,6 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		generalPage.add(panelGroup);
 
-		// Show currency in panel toggle
 		const showCurrencyInPanelRow = new Adw.SwitchRow({
 			title: "Show Currency in Panel",
 			subtitle: "Display currency symbol/code alongside rates in the panel",
@@ -287,7 +292,6 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		panelGroup.add(showCurrencyInPanelRow);
 
-		// Max panel items
 		const maxPanelRow = new Adw.SpinRow({
 			title: "Max Panel Items",
 			subtitle: "Maximum number of rates to show in the panel",
@@ -304,7 +308,6 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		panelGroup.add(maxPanelRow);
 
-		// Panel sort order dropdown
 		const sortModel = new Gtk.StringList();
 		for (const option of PANEL_SORT_OPTIONS) {
 			sortModel.append(option.label);
@@ -326,7 +329,6 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		panelGroup.add(sortRow);
 
-		// Panel position dropdown
 		const panelPositionModel = new Gtk.StringList();
 		for (const option of PANEL_POSITION_OPTIONS) {
 			panelPositionModel.append(option.label);
@@ -348,7 +350,6 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		panelGroup.add(panelPositionRow);
 
-		// Panel index (order within the box)
 		const panelIndexRow = new Adw.SpinRow({
 			title: "Panel Index",
 			subtitle: "Order within panel area",
@@ -365,33 +366,75 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		panelGroup.add(panelIndexRow);
 
-		// Panel separator
-		const separatorRow = new Adw.EntryRow({
-			title: "Panel Separator",
-		});
+		const separatorRow = new Adw.EntryRow({ title: "Panel Separator" });
 		separatorRow.text = settings.get_string("panel-separator");
 		separatorRow.connect("changed", () => {
 			settings.set_string("panel-separator", separatorRow.text);
 		});
 		panelGroup.add(separatorRow);
 
-		// Panel item template
-		const templateRow = new Adw.EntryRow({
-			title: "Panel Item Template",
-		});
+		const templateRow = new Adw.EntryRow({ title: "Panel Item Template" });
 		templateRow.text = settings.get_string("panel-item-template");
 		templateRow.connect("changed", () => {
 			settings.set_string("panel-item-template", templateRow.text);
 		});
 		panelGroup.add(templateRow);
 
-		// Panel template help text
 		const panelTemplateHelpRow = new Adw.ActionRow({
 			title: "Template Placeholders",
-			subtitle: "Use {symbol} and {rate}. Supports Pango markup for colors.",
+			subtitle: "Use {symbol}, {rate}, {change}, {percent}. Supports Pango markup.",
 		});
 		panelTemplateHelpRow.sensitive = false;
 		panelGroup.add(panelTemplateHelpRow);
+
+		// Price Change Indicator Group
+		const priceChangeGroup = new Adw.PreferencesGroup({
+			title: "Price Change Indicator",
+			description: "Configure how price changes are displayed",
+		});
+		generalPage.add(priceChangeGroup);
+
+		const priceChangeModeModel = new Gtk.StringList();
+		for (const mode of PRICE_CHANGE_MODES) {
+			priceChangeModeModel.append(mode.label);
+		}
+
+		const priceChangeModeRow = new Adw.ComboRow({
+			title: "Price Change Mode",
+			subtitle: "How to determine if price increased or decreased",
+			model: priceChangeModeModel,
+		});
+
+		const currentPriceChangeMode = settings.get_string("price-change-mode");
+		const priceChangeModeIndex = PRICE_CHANGE_MODES.findIndex((m) => m.id === currentPriceChangeMode);
+		priceChangeModeRow.selected = priceChangeModeIndex >= 0 ? priceChangeModeIndex : 0;
+
+		priceChangeModeRow.connect("notify::selected", () => {
+			const selected = PRICE_CHANGE_MODES[priceChangeModeRow.selected].id;
+			settings.set_string("price-change-mode", selected);
+		});
+		priceChangeGroup.add(priceChangeModeRow);
+
+		const templateUpRow = new Adw.EntryRow({ title: "Panel Template (Price Up)" });
+		templateUpRow.text = settings.get_string("panel-item-template-up");
+		templateUpRow.connect("changed", () => {
+			settings.set_string("panel-item-template-up", templateUpRow.text);
+		});
+		priceChangeGroup.add(templateUpRow);
+
+		const templateDownRow = new Adw.EntryRow({ title: "Panel Template (Price Down)" });
+		templateDownRow.text = settings.get_string("panel-item-template-down");
+		templateDownRow.connect("changed", () => {
+			settings.set_string("panel-item-template-down", templateDownRow.text);
+		});
+		priceChangeGroup.add(templateDownRow);
+
+		const priceChangeHelpRow = new Adw.ActionRow({
+			title: "Template Placeholders",
+			subtitle: "Use {symbol}, {rate}, {change}, {percent}. Supports Pango markup.",
+		});
+		priceChangeHelpRow.sensitive = false;
+		priceChangeGroup.add(priceChangeHelpRow);
 
 		// Menu Settings Group
 		const menuGroup = new Adw.PreferencesGroup({
@@ -400,20 +443,30 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		generalPage.add(menuGroup);
 
-		// Menu item template
-		const menuTemplateRow = new Adw.EntryRow({
-			title: "Menu Item Template",
-		});
+		const menuTemplateRow = new Adw.EntryRow({ title: "Menu Item Template" });
 		menuTemplateRow.text = settings.get_string("menu-item-template");
 		menuTemplateRow.connect("changed", () => {
 			settings.set_string("menu-item-template", menuTemplateRow.text);
 		});
 		menuGroup.add(menuTemplateRow);
 
-		// Menu template help text
+		const menuTemplateUpRow = new Adw.EntryRow({ title: "Menu Template (Price Up)" });
+		menuTemplateUpRow.text = settings.get_string("menu-item-template-up");
+		menuTemplateUpRow.connect("changed", () => {
+			settings.set_string("menu-item-template-up", menuTemplateUpRow.text);
+		});
+		menuGroup.add(menuTemplateUpRow);
+
+		const menuTemplateDownRow = new Adw.EntryRow({ title: "Menu Template (Price Down)" });
+		menuTemplateDownRow.text = settings.get_string("menu-item-template-down");
+		menuTemplateDownRow.connect("changed", () => {
+			settings.set_string("menu-item-template-down", menuTemplateDownRow.text);
+		});
+		menuGroup.add(menuTemplateDownRow);
+
 		const menuTemplateHelpRow = new Adw.ActionRow({
 			title: "Template Placeholders",
-			subtitle: "Use {symbol} for the symbol name and {rate} for the formatted rate",
+			subtitle: "Use {symbol}, {rate}, {change}, {percent}. Supports Pango markup.",
 		});
 		menuTemplateHelpRow.sensitive = false;
 		menuGroup.add(menuTemplateHelpRow);
@@ -425,7 +478,6 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		generalPage.add(formatGroup);
 
-		// Number format dropdown
 		const formatModel = new Gtk.StringList();
 		for (const format of NUMBER_FORMATS) {
 			formatModel.append(format.label);
@@ -447,7 +499,6 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		formatGroup.add(formatRow);
 
-		// Decimal places
 		const decimalRow = new Adw.SpinRow({
 			title: "Decimal Places",
 			subtitle: "Number of decimal places to display",
@@ -471,7 +522,6 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		generalPage.add(symbolsGroup);
 
-		// Use currency symbols toggle
 		const useSymbolsRow = new Adw.SwitchRow({
 			title: "Use Currency Symbols",
 			subtitle: "Display € instead of EUR, $ instead of USD, etc.",
@@ -482,7 +532,6 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		symbolsGroup.add(useSymbolsRow);
 
-		// Symbol position dropdown
 		const positionModel = new Gtk.StringList();
 		for (const pos of SYMBOL_POSITIONS) {
 			positionModel.append(pos.label);
@@ -511,7 +560,16 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		generalPage.add(clipboardGroup);
 
-		// Clipboard format dropdown
+		const clipboardNotificationRow = new Adw.SwitchRow({
+			title: "Show Notification",
+			subtitle: "Display a notification when a rate is copied to clipboard",
+		});
+		clipboardNotificationRow.active = settings.get_boolean("clipboard-notification");
+		clipboardNotificationRow.connect("notify::active", () => {
+			settings.set_boolean("clipboard-notification", clipboardNotificationRow.active);
+		});
+		clipboardGroup.add(clipboardNotificationRow);
+
 		const clipboardModel = new Gtk.StringList();
 		for (const format of CLIPBOARD_FORMATS) {
 			clipboardModel.append(format.label);
@@ -523,17 +581,6 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 			model: clipboardModel,
 		});
 
-		// Clipboard notification toggle
-		const clipboardNotificationRow = new Adw.SwitchRow({
-			title: "Show Notification",
-			subtitle: "Display a notification when a rate is copied to clipboard",
-		});
-		clipboardNotificationRow.active = settings.get_boolean("clipboard-notification");
-		clipboardNotificationRow.connect("notify::active", () => {
-			settings.set_boolean("clipboard-notification", clipboardNotificationRow.active);
-		});
-		clipboardGroup.add(clipboardNotificationRow);
-
 		const currentClipboard = settings.get_string("clipboard-format");
 		const clipboardIndex = CLIPBOARD_FORMATS.findIndex((f) => f.id === currentClipboard);
 		clipboardRow.selected = clipboardIndex >= 0 ? clipboardIndex : 0;
@@ -544,17 +591,13 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		clipboardGroup.add(clipboardRow);
 
-		// Clipboard template
-		const clipboardTemplateRow = new Adw.EntryRow({
-			title: "Clipboard Template",
-		});
+		const clipboardTemplateRow = new Adw.EntryRow({ title: "Clipboard Template" });
 		clipboardTemplateRow.text = settings.get_string("clipboard-template");
 		clipboardTemplateRow.connect("changed", () => {
 			settings.set_string("clipboard-template", clipboardTemplateRow.text);
 		});
 		clipboardGroup.add(clipboardTemplateRow);
 
-		// Clipboard template help text
 		const clipboardTemplateHelpRow = new Adw.ActionRow({
 			title: "Template Placeholders",
 			subtitle: "Used when format is 'As displayed'. Use {symbol} and {rate}.",
@@ -569,7 +612,6 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		generalPage.add(metalsGroup);
 
-		// Metals unit dropdown
 		const unitModel = new Gtk.StringList();
 		unitModel.append("Gram");
 		unitModel.append("Troy Ounce");
@@ -580,7 +622,6 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 			model: unitModel,
 		});
 
-		// Set current value
 		const currentUnit = settings.get_string("metals-unit");
 		unitRow.selected = currentUnit === "troy-ounce" ? 1 : 0;
 
@@ -597,7 +638,6 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		generalPage.add(updateGroup);
 
-		// Update interval
 		const intervalRow = new Adw.SpinRow({
 			title: "Update Interval",
 			subtitle: "How often to fetch new rates (in seconds)",
@@ -643,11 +683,7 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		page.add(watchedGroup);
 
-		// Current watched symbols display
-		const watchedEntry = new Adw.EntryRow({
-			title: "Symbols (comma-separated)",
-		});
-
+		const watchedEntry = new Adw.EntryRow({ title: "Symbols (comma-separated)" });
 		const watched = settings.get_strv(`watched-${category}`);
 		watchedEntry.text = watched.join(", ");
 
@@ -668,10 +704,7 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		page.add(panelSymbolsGroup);
 
-		const panelEntry = new Adw.EntryRow({
-			title: "Panel Symbols (comma-separated)",
-		});
-
+		const panelEntry = new Adw.EntryRow({ title: "Panel Symbols (comma-separated)" });
 		const panelSymbols = settings.get_strv(`panel-${category}`);
 		panelEntry.text = panelSymbols.join(", ");
 
@@ -692,7 +725,6 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		page.add(popularGroup);
 
-		// Create a flow box for popular symbol buttons
 		const flowBox = new Gtk.FlowBox({
 			selection_mode: Gtk.SelectionMode.NONE,
 			homogeneous: true,
@@ -754,14 +786,12 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		fetchRow.add_suffix(fetchButton);
 		fetchGroup.add(fetchRow);
 
-		// Available symbols list (expandable)
 		const availableExpander = new Adw.ExpanderRow({
 			title: "Available Symbols",
 			subtitle: 'Click "Fetch" to load symbols',
 		});
 		fetchGroup.add(availableExpander);
 
-		// Store reference to clear rows later
 		let symbolRows = [];
 
 		fetchButton.connect("clicked", async () => {
@@ -772,21 +802,15 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 			try {
 				const symbols = await this._fetchAvailableSymbols(category);
 
-				// Clear ALL existing rows first
 				for (const row of symbolRows) {
 					try {
 						availableExpander.remove(row);
-					} catch (e) {
-						// Row might already be removed
-					}
+					} catch (e) {}
 				}
 				symbolRows = [];
 
-				const displaySymbols = symbols;
-				for (const symbol of displaySymbols) {
-					const symbolRow = new Adw.ActionRow({
-						title: symbol,
-					});
+				for (const symbol of symbols) {
+					const symbolRow = new Adw.ActionRow({ title: symbol });
 
 					const addButton = new Gtk.Button({
 						icon_name: "list-add-symbolic",
