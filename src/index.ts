@@ -495,6 +495,177 @@ app.get("/v1/stocks/history/:symbol/daily", async (c) => {
 	}
 });
 
+// Metal history with currency - raw (last 24h)
+app.get("/v1/metals/history/:symbol/currency/:base", async (c) => {
+	httpRequests.labels({ endpoint: "/v1/metals/history/:symbol/currency/:base" }).inc();
+
+	if (!historyService.isEnabled()) {
+		return c.json({ error: "History service is not enabled" }, 503);
+	}
+
+	try {
+		const symbol = c.params["symbol"]!.toUpperCase();
+		const base = c.params["base"]!.toUpperCase();
+		const result = await historyService.getRawHistory(symbol, "metal", base, true);
+		return c.json(result, 200, { "Cache-Control": rawCacheControl });
+	} catch (error: any) {
+		Logger.error("[History] Error:", error);
+		return c.json({ error: error.message }, 500);
+	}
+});
+
+// Metal history with currency - hourly (last 90 days)
+app.get("/v1/metals/history/:symbol/currency/:base/hourly", async (c) => {
+	httpRequests.labels({ endpoint: "/v1/metals/history/:symbol/currency/:base/hourly" }).inc();
+
+	if (!historyService.isEnabled()) {
+		return c.json({ error: "History service is not enabled" }, 503);
+	}
+
+	try {
+		const symbol = c.params["symbol"]!.toUpperCase();
+		const base = c.params["base"]!.toUpperCase();
+		const result = await historyService.getHourlyHistory(symbol, "metal", base, true);
+		return c.json(result, 200, { "Cache-Control": hourlyCacheControl });
+	} catch (error: any) {
+		Logger.error("[History] Error:", error);
+		return c.json({ error: error.message }, 500);
+	}
+});
+
+// Metal history with currency - daily (all time)
+app.get("/v1/metals/history/:symbol/currency/:base/daily", async (c) => {
+	httpRequests.labels({ endpoint: "/v1/metals/history/:symbol/currency/:base/daily" }).inc();
+
+	if (!historyService.isEnabled()) {
+		return c.json({ error: "History service is not enabled" }, 503);
+	}
+
+	try {
+		const symbol = c.params["symbol"]!.toUpperCase();
+		const base = c.params["base"]!.toUpperCase();
+		const result = await historyService.getDailyHistory(symbol, "metal", base, true);
+		return c.json(result, 200, { "Cache-Control": dailyCacheControl });
+	} catch (error: any) {
+		Logger.error("[History] Error:", error);
+		return c.json({ error: error.message }, 500);
+	}
+});
+
+// Crypto history with currency - raw (last 24h)
+app.get("/v1/crypto/history/:symbol/currency/:base", async (c) => {
+	httpRequests.labels({ endpoint: "/v1/crypto/history/:symbol/currency/:base" }).inc();
+
+	if (!historyService.isEnabled()) {
+		return c.json({ error: "History service is not enabled" }, 503);
+	}
+
+	try {
+		const symbol = c.params["symbol"]!.toUpperCase();
+		const base = c.params["base"]!.toUpperCase();
+		const result = await historyService.getRawHistory(symbol, "crypto", base, true);
+		return c.json(result, 200, { "Cache-Control": rawCacheControl });
+	} catch (error: any) {
+		Logger.error("[History] Error:", error);
+		return c.json({ error: error.message }, 500);
+	}
+});
+
+// Crypto history with currency - hourly (last 90 days)
+app.get("/v1/crypto/history/:symbol/currency/:base/hourly", async (c) => {
+	httpRequests.labels({ endpoint: "/v1/crypto/history/:symbol/currency/:base/hourly" }).inc();
+
+	if (!historyService.isEnabled()) {
+		return c.json({ error: "History service is not enabled" }, 503);
+	}
+
+	try {
+		const symbol = c.params["symbol"]!.toUpperCase();
+		const base = c.params["base"]!.toUpperCase();
+		const result = await historyService.getHourlyHistory(symbol, "crypto", base, true);
+		return c.json(result, 200, { "Cache-Control": hourlyCacheControl });
+	} catch (error: any) {
+		Logger.error("[History] Error:", error);
+		return c.json({ error: error.message }, 500);
+	}
+});
+
+// Crypto history with currency - daily (all time)
+app.get("/v1/crypto/history/:symbol/currency/:base/daily", async (c) => {
+	httpRequests.labels({ endpoint: "/v1/crypto/history/:symbol/currency/:base/daily" }).inc();
+
+	if (!historyService.isEnabled()) {
+		return c.json({ error: "History service is not enabled" }, 503);
+	}
+
+	try {
+		const symbol = c.params["symbol"]!.toUpperCase();
+		const base = c.params["base"]!.toUpperCase();
+		const result = await historyService.getDailyHistory(symbol, "crypto", base, true);
+		return c.json(result, 200, { "Cache-Control": dailyCacheControl });
+	} catch (error: any) {
+		Logger.error("[History] Error:", error);
+		return c.json({ error: error.message }, 500);
+	}
+});
+
+// Stock history with currency - raw (last 24h)
+app.get("/v1/stocks/history/:symbol/currency/:base", async (c) => {
+	httpRequests.labels({ endpoint: "/v1/stocks/history/:symbol/currency/:base" }).inc();
+
+	if (!historyService.isEnabled()) {
+		return c.json({ error: "History service is not enabled" }, 503);
+	}
+
+	try {
+		const symbol = c.params["symbol"]!.toUpperCase();
+		const base = c.params["base"]!.toUpperCase();
+		const result = await historyService.getRawHistory(symbol, "stock", base, true);
+		return c.json(result, 200, { "Cache-Control": rawCacheControl });
+	} catch (error: any) {
+		Logger.error("[History] Error:", error);
+		return c.json({ error: error.message }, 500);
+	}
+});
+
+// Stock history with currency - hourly (last 90 days)
+app.get("/v1/stocks/history/:symbol/currency/:base/hourly", async (c) => {
+	httpRequests.labels({ endpoint: "/v1/stocks/history/:symbol/currency/:base/hourly" }).inc();
+
+	if (!historyService.isEnabled()) {
+		return c.json({ error: "History service is not enabled" }, 503);
+	}
+
+	try {
+		const symbol = c.params["symbol"]!.toUpperCase();
+		const base = c.params["base"]!.toUpperCase();
+		const result = await historyService.getHourlyHistory(symbol, "stock", base, true);
+		return c.json(result, 200, { "Cache-Control": hourlyCacheControl });
+	} catch (error: any) {
+		Logger.error("[History] Error:", error);
+		return c.json({ error: error.message }, 500);
+	}
+});
+
+// Stock history with currency - daily (all time)
+app.get("/v1/stocks/history/:symbol/currency/:base/daily", async (c) => {
+	httpRequests.labels({ endpoint: "/v1/stocks/history/:symbol/currency/:base/daily" }).inc();
+
+	if (!historyService.isEnabled()) {
+		return c.json({ error: "History service is not enabled" }, 503);
+	}
+
+	try {
+		const symbol = c.params["symbol"]!.toUpperCase();
+		const base = c.params["base"]!.toUpperCase();
+		const result = await historyService.getDailyHistory(symbol, "stock", base, true);
+		return c.json(result, 200, { "Cache-Control": dailyCacheControl });
+	} catch (error: any) {
+		Logger.error("[History] Error:", error);
+		return c.json({ error: error.message }, 500);
+	}
+});
+
 export const server = await app.listen({
 	hostname: host,
 	port: port,
@@ -520,27 +691,36 @@ Logger.info(`Server running on http://${host}:${port}`);
 Logger.info(`Exchange rates updates every ${updateInterval}s`);
 Logger.info(`History recording: ${historyService.isEnabled() ? "enabled" : "disabled"}`);
 Logger.info("Available endpoints:");
-Logger.info("  GET /                                 - Health check and stats");
-Logger.info("  GET /metrics                          - OpenMetrics format");
-Logger.info("  GET /openapi.json                     - OpenAPI specification");
-Logger.info("  GET /v1/assets                        - List all supported assets");
-Logger.info("  GET /v1/rates                         - Currency rates (USD base)");
-Logger.info("  GET /v1/rates/:base                   - Currency rates (custom base)");
-Logger.info("  GET /v1/rates/history/:symbol         - Currency history (raw, last 24h)");
-Logger.info("  GET /v1/rates/history/:symbol/hourly  - Currency history (hourly, last 90d)");
-Logger.info("  GET /v1/rates/history/:symbol/daily   - Currency history (daily, all time)");
-Logger.info("  GET /v1/metals/rates                  - Metal rates (USD base)");
-Logger.info("  GET /v1/metals/rates/:base            - Metal rates (custom base)");
-Logger.info("  GET /v1/metals/history/:symbol        - Metal history (raw, last 24h)");
-Logger.info("  GET /v1/metals/history/:symbol/hourly - Metal history (hourly, last 90d)");
-Logger.info("  GET /v1/metals/history/:symbol/daily  - Metal history (daily, all time)");
-Logger.info("  GET /v1/crypto/rates                  - Crypto rates (USD base)");
-Logger.info("  GET /v1/crypto/rates/:base            - Crypto rates (custom base)");
-Logger.info("  GET /v1/crypto/history/:symbol        - Crypto history (raw, last 24h)");
-Logger.info("  GET /v1/crypto/history/:symbol/hourly - Crypto history (hourly, last 90d)");
-Logger.info("  GET /v1/crypto/history/:symbol/daily  - Crypto history (daily, all time)");
-Logger.info("  GET /v1/stocks/rates                  - Stock rates (USD base)");
-Logger.info("  GET /v1/stocks/rates/:base            - Stock rates (custom base)");
-Logger.info("  GET /v1/stocks/history/:symbol        - Stock history (raw, last 24h)");
-Logger.info("  GET /v1/stocks/history/:symbol/hourly - Stock history (hourly, last 90d)");
-Logger.info("  GET /v1/stocks/history/:symbol/daily  - Stock history (daily, all time)");
+Logger.info("  GET /                                                   - Health check and stats");
+Logger.info("  GET /metrics                                            - OpenMetrics format");
+Logger.info("  GET /openapi.json                                       - OpenAPI specification");
+Logger.info("  GET /v1/assets                                          - List all supported assets");
+Logger.info("  GET /v1/rates                                           - Currency rates (USD base)");
+Logger.info("  GET /v1/rates/:base                                     - Currency rates (custom base)");
+Logger.info("  GET /v1/rates/history/:symbol                           - Currency history (raw, last 24h)");
+Logger.info("  GET /v1/rates/history/:symbol/hourly                    - Currency history (hourly, last 90d)");
+Logger.info("  GET /v1/rates/history/:symbol/daily                     - Currency history (daily, all time)");
+Logger.info("  GET /v1/metals/rates                                    - Metal rates (USD base)");
+Logger.info("  GET /v1/metals/rates/:base                              - Metal rates (custom base)");
+Logger.info("  GET /v1/metals/history/:symbol                          - Metal history (raw, last 24h)");
+Logger.info("  GET /v1/metals/history/:symbol/hourly                   - Metal history (hourly, last 90d)");
+Logger.info("  GET /v1/metals/history/:symbol/daily                    - Metal history (daily, all time)");
+Logger.info("  GET /v1/metals/history/:symbol/currency/:base           - Metal history in currency (raw)");
+Logger.info("  GET /v1/metals/history/:symbol/currency/:base/hourly    - Metal history in currency (hourly)");
+Logger.info("  GET /v1/metals/history/:symbol/currency/:base/daily     - Metal history in currency (daily)");
+Logger.info("  GET /v1/crypto/rates                                    - Crypto rates (USD base)");
+Logger.info("  GET /v1/crypto/rates/:base                              - Crypto rates (custom base)");
+Logger.info("  GET /v1/crypto/history/:symbol                          - Crypto history (raw, last 24h)");
+Logger.info("  GET /v1/crypto/history/:symbol/hourly                   - Crypto history (hourly, last 90d)");
+Logger.info("  GET /v1/crypto/history/:symbol/daily                    - Crypto history (daily, all time)");
+Logger.info("  GET /v1/crypto/history/:symbol/currency/:base           - Crypto history in currency (raw)");
+Logger.info("  GET /v1/crypto/history/:symbol/currency/:base/hourly    - Crypto history in currency (hourly)");
+Logger.info("  GET /v1/crypto/history/:symbol/currency/:base/daily     - Crypto history in currency (daily)");
+Logger.info("  GET /v1/stocks/rates                                    - Stock rates (USD base)");
+Logger.info("  GET /v1/stocks/rates/:base                              - Stock rates (custom base)");
+Logger.info("  GET /v1/stocks/history/:symbol                          - Stock history (raw, last 24h)");
+Logger.info("  GET /v1/stocks/history/:symbol/hourly                   - Stock history (hourly, last 90d)");
+Logger.info("  GET /v1/stocks/history/:symbol/daily                    - Stock history (daily, all time)");
+Logger.info("  GET /v1/stocks/history/:symbol/currency/:base           - Stock history in currency (raw)");
+Logger.info("  GET /v1/stocks/history/:symbol/currency/:base/hourly    - Stock history in currency (hourly)");
+Logger.info("  GET /v1/stocks/history/:symbol/currency/:base/daily     - Stock history in currency (daily)");

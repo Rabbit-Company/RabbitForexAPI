@@ -435,6 +435,76 @@ Example: `/v1/metals/history/GOLD/daily`
 }
 ```
 
+### GET `/v1/metals/history/:symbol/currency/:base`
+
+Get raw price history for a metal converted to specified currency using historical exchange rates (last 24 hours)
+
+Example: `/v1/metals/history/GOLD/currency/EUR`
+
+```json
+{
+	"symbol": "GOLD",
+	"base": "EUR",
+	"resolution": "raw",
+	"data": [
+		{
+			"timestamp": "2025-11-07T06:30:00.000Z",
+			"price": 3978.54
+		}
+	]
+}
+```
+
+### GET `/v1/metals/history/:symbol/currency/:base/hourly`
+
+Get hourly aggregated price history for a metal converted to specified currency using historical exchange rates (last 90 days)
+
+Example: `/v1/metals/history/GOLD/currency/EUR/hourly`
+
+```json
+{
+	"symbol": "GOLD",
+	"base": "EUR",
+	"resolution": "hourly",
+	"data": [
+		{
+			"timestamp": "2025-11-07T06:00:00Z",
+			"avg": 3978.54,
+			"min": 3899.85,
+			"max": 4017.43,
+			"open": 3962.13,
+			"close": 3998.27,
+			"sampleCount": 120
+		}
+	]
+}
+```
+
+### GET `/v1/metals/history/:symbol/currency/:base/daily`
+
+Get daily aggregated price history for a metal converted to specified currency using historical exchange rates (all time)
+
+Example: `/v1/metals/history/GOLD/currency/EUR/daily`
+
+```json
+{
+	"symbol": "GOLD",
+	"base": "EUR",
+	"resolution": "daily",
+	"data": [
+		{
+			"timestamp": "2025-11-07",
+			"avg": 3978.54,
+			"min": 3899.85,
+			"max": 4017.43,
+			"open": 3962.13,
+			"close": 3998.27,
+			"sampleCount": 2880
+		}
+	]
+}
+```
+
 ### GET `/v1/crypto/rates`
 
 Get all cryptocurrency rates with USD as base (default)
@@ -568,6 +638,80 @@ Example: `/v1/crypto/history/BTC/daily`
 			"max": 100000.0,
 			"open": 96000.0,
 			"close": 99000.0,
+			"sampleCount": 2880
+		}
+	]
+}
+```
+
+### GET `/v1/crypto/history/:symbol/currency/:base`
+
+Get raw price history for a cryptocurrency converted to specified currency using historical exchange rates (last 24 hours)
+
+Example: `/v1/crypto/history/BTC/currency/EUR`
+
+```json
+{
+	"symbol": "BTC",
+	"base": "EUR",
+	"resolution": "raw",
+	"data": [
+		{
+			"timestamp": "2025-11-07T06:30:00.000Z",
+			"price": 89523.45
+		},
+		{
+			"timestamp": "2025-11-07T06:30:30.000Z",
+			"price": 89542.12
+		}
+	]
+}
+```
+
+### GET `/v1/crypto/history/:symbol/currency/:base/hourly`
+
+Get hourly aggregated price history for a cryptocurrency converted to specified currency using historical exchange rates (last 90 days)
+
+Example: `/v1/crypto/history/BTC/currency/EUR/hourly`
+
+```json
+{
+	"symbol": "BTC",
+	"base": "EUR",
+	"resolution": "hourly",
+	"data": [
+		{
+			"timestamp": "2025-11-07T06:00:00Z",
+			"avg": 89500.0,
+			"min": 88120.0,
+			"max": 90880.0,
+			"open": 88567.0,
+			"close": 89943.0,
+			"sampleCount": 120
+		}
+	]
+}
+```
+
+### GET `/v1/crypto/history/:symbol/currency/:base/daily`
+
+Get daily aggregated price history for a cryptocurrency converted to specified currency using historical exchange rates (all time)
+
+Example: `/v1/crypto/history/BTC/currency/EUR/daily`
+
+```json
+{
+	"symbol": "BTC",
+	"base": "EUR",
+	"resolution": "daily",
+	"data": [
+		{
+			"timestamp": "2025-11-07",
+			"avg": 89500.0,
+			"min": 87210.0,
+			"max": 91800.0,
+			"open": 88105.0,
+			"close": 90873.0,
 			"sampleCount": 2880
 		}
 	]
@@ -720,6 +864,80 @@ Example: `/v1/stocks/history/NET/daily`
 }
 ```
 
+### GET `/v1/stocks/history/:symbol/currency/:base`
+
+Get raw price history for a stock converted to specified currency using historical exchange rates (last 24 hours)
+
+Example: `/v1/stocks/history/NET/currency/EUR`
+
+```json
+{
+	"symbol": "NET",
+	"base": "EUR",
+	"resolution": "raw",
+	"data": [
+		{
+			"timestamp": "2025-11-07T06:30:00.000Z",
+			"price": 180.12
+		},
+		{
+			"timestamp": "2025-11-07T06:30:30.000Z",
+			"price": 182.65
+		}
+	]
+}
+```
+
+### GET `/v1/stocks/history/:symbol/currency/:base/hourly`
+
+Get hourly aggregated price history for a stock converted to specified currency using historical exchange rates (last 90 days)
+
+Example: `/v1/stocks/history/NET/currency/EUR/hourly`
+
+```json
+{
+	"symbol": "NET",
+	"base": "EUR",
+	"resolution": "hourly",
+	"data": [
+		{
+			"timestamp": "2025-11-07T06:00:00Z",
+			"avg": 180.94,
+			"min": 169.39,
+			"max": 193.16,
+			"open": 171.62,
+			"close": 188.83,
+			"sampleCount": 120
+		}
+	]
+}
+```
+
+### GET `/v1/stocks/history/:symbol/currency/:base/daily`
+
+Get daily aggregated price history for a stock converted to specified currency using historical exchange rates (all time)
+
+Example: `/v1/stocks/history/NET/currency/EUR/daily`
+
+```json
+{
+	"symbol": "NET",
+	"base": "EUR",
+	"resolution": "daily",
+	"data": [
+		{
+			"timestamp": "2025-11-07",
+			"avg": 180.94,
+			"min": 169.39,
+			"max": 193.16,
+			"open": 171.62,
+			"close": 188.83,
+			"sampleCount": 2880
+		}
+	]
+}
+```
+
 ### GET `/v1/assets`
 
 Get lists of all supported currencies, metals and cryptocurrencies
@@ -757,6 +975,26 @@ An aggregation job runs every 10 minutes to compute:
 
 - **Hourly aggregates**: From raw data after each hour completes
 - **Daily aggregates**: From hourly data after each day completes
+
+### Historical Currency Conversion
+
+The API supports converting historical prices to different currencies using historical exchange rates. This ensures accurate price representation at the time of each data point.
+
+**Endpoints with currency conversion:**
+
+- `/v1/metals/history/:symbol/currency/:base[/hourly|/daily]`
+- `/v1/crypto/history/:symbol/currency/:base[/hourly|/daily]`
+- `/v1/stocks/history/:symbol/currency/:base[/hourly|/daily]`
+
+**How it works:**
+
+1. Fetch asset prices in USD from ClickHouse
+2. Fetch historical currency rates for the target currency
+3. For each data point, apply the historical conversion rate from the same time period
+4. If no exact match is found, the closest available rate is used
+5. Falls back to current rate if no historical data is available
+
+**Example:** `/v1/crypto/history/BTC/currency/EUR/daily` returns Bitcoin prices converted to EUR using the EUR/USD rate from each respective day.
 
 ### Response Fields
 

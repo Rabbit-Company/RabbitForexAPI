@@ -163,7 +163,7 @@ export class HistoryService {
 	}
 
 	/**
-	 * Get conversion rate from USD to target currency
+	 * Get conversion rate from USD to target currency (current rate)
 	 */
 	private getConversionRate(base: string): number {
 		if (base === "USD" || !this.exchange) return 1;
@@ -176,20 +176,105 @@ export class HistoryService {
 	}
 
 	/**
-	 * Get raw prices for a symbol (last 24 hours - all data from raw table)
+	 * Get historical conversion rates for a currency (USD to target currency)
+	 * Returns a map of timestamp/date -> conversion rate (avg)
 	 */
-	async getRawHistory(symbol: string, assetType: AssetType, base: string = "USD"): Promise<HistoryResponse> {
+	private async getHistoricalConversionRates(targetCurrency: string, resolution: "raw" | "hourly" | "daily"): Promise<Map<string, number>> {
+		const rateMap = new Map<string, number>();
+
+		if (targetCurrency === "USD") {
+			return rateMap;
+		}
+
+		try {
+			if (resolution === "raw") {
+				const rawData = await this.clickhouse.getAllRawPrices(targetCurrency, "currency");
+				for (const r of rawData) {
+					if (r.price_usd > 0) {
+						rateMap.set(r.timestamp, 1 / r.price_usd);
+					}
+				}
+			} else if (resolution === "hourly") {
+				const hourlyData = await this.clickhouse.getAllHourlyPrices(targetCurrency, "currency");
+				for (const r of hourlyData) {
+					if (r.price_avg > 0) {
+						rateMap.set(r.hour, 1 / r.price_avg);
+					}
+				}
+			} else if (resolution === "daily") {
+				const dailyData = await this.clickhouse.getAllDailyPrices(targetCurrency, "currency");
+				for (const r of dailyData) {
+					if (r.price_avg > 0) {
+						rateMap.set(r.date, 1 / r.price_avg);
+					}
+				}
+			}
+		} catch (error: any) {
+			Logger.warn(`[HistoryService] Failed to get historical rates for ${targetCurrency}:`, error);
+		}
+
+		return rateMap;
+	}
+
+	/**
+	 * Find closest conversion rate for a given timestamp
+	 */
+	private findClosestRate(timestamp: string, rateMap: Map<string, number>, fallbackRate: number): number {
+		if (rateMap.has(timestamp)) {
+			return rateMap.get(timestamp)!;
+		}
+
+		const targetTime = new Date(timestamp).getTime();
+		let closestRate = fallbackRate;
+		let closestDiff = Infinity;
+
+		for (const [ts, rate] of rateMap) {
+			const diff = Math.abs(new Date(ts).getTime() - targetTime);
+			if (diff < closestDiff) {
+				closestDiff = diff;
+				closestRate = rate;
+			}
+		}
+
+		return closestRate;
+	}
+
+	/**
+	 * Get raw prices for a symbol (last 24 hours - all data from raw table)
+	 * @param useHistoricalRates - if true, use historical conversion rates instead of current rate
+	 */
+	async getRawHistory(symbol: string, assetType: AssetType, base: string = "USD", useHistoricalRates: boolean = false): Promise<HistoryResponse> {
 		if (!this.recordingEnabled) {
 			throw new Error("History service is not enabled");
 		}
 
-		const conversionRate = this.getConversionRate(base);
 		const rawData = await this.clickhouse.getAllRawPrices(symbol, assetType);
 
-		const data: RawPriceRecord[] = rawData.map((r) => ({
-			timestamp: r.timestamp,
-			price: this.roundPrice(r.price_usd * conversionRate),
-		}));
+		let data: RawPriceRecord[];
+
+		if (base === "USD") {
+			data = rawData.map((r) => ({
+				timestamp: r.timestamp,
+				price: this.roundPrice(r.price_usd),
+			}));
+		} else if (useHistoricalRates) {
+			const rateMap = await this.getHistoricalConversionRates(base, "raw");
+			const currentRate = this.getConversionRate(base);
+
+			data = rawData.map((r) => {
+				const conversionRate = rateMap.size > 0 ? this.findClosestRate(r.timestamp, rateMap, currentRate) : currentRate;
+				return {
+					timestamp: r.timestamp,
+					price: this.roundPrice(r.price_usd * conversionRate),
+				};
+			});
+		} else {
+			const conversionRate = this.getConversionRate(base);
+			data = rawData.map((r) => ({
+				timestamp: r.timestamp,
+				price: this.roundPrice(r.price_usd * conversionRate),
+			}));
+		}
 
 		return {
 			symbol,
@@ -201,24 +286,55 @@ export class HistoryService {
 
 	/**
 	 * Get hourly prices for a symbol (last 90 days - all data from hourly table)
+	 * @param useHistoricalRates - if true, use historical conversion rates instead of current rate
 	 */
-	async getHourlyHistory(symbol: string, assetType: AssetType, base: string = "USD"): Promise<HistoryResponse> {
+	async getHourlyHistory(symbol: string, assetType: AssetType, base: string = "USD", useHistoricalRates: boolean = false): Promise<HistoryResponse> {
 		if (!this.recordingEnabled) {
 			throw new Error("History service is not enabled");
 		}
 
-		const conversionRate = this.getConversionRate(base);
 		const hourlyData = await this.clickhouse.getAllHourlyPrices(symbol, assetType);
 
-		const data: AggregatedPriceRecord[] = hourlyData.map((r) => ({
-			timestamp: r.hour,
-			avg: this.roundPrice(r.price_avg * conversionRate),
-			min: this.roundPrice(r.price_min * conversionRate),
-			max: this.roundPrice(r.price_max * conversionRate),
-			open: this.roundPrice(r.price_open * conversionRate),
-			close: this.roundPrice(r.price_close * conversionRate),
-			sampleCount: r.sample_count,
-		}));
+		let data: AggregatedPriceRecord[];
+
+		if (base === "USD") {
+			data = hourlyData.map((r) => ({
+				timestamp: r.hour,
+				avg: this.roundPrice(r.price_avg),
+				min: this.roundPrice(r.price_min),
+				max: this.roundPrice(r.price_max),
+				open: this.roundPrice(r.price_open),
+				close: this.roundPrice(r.price_close),
+				sampleCount: r.sample_count,
+			}));
+		} else if (useHistoricalRates) {
+			const rateMap = await this.getHistoricalConversionRates(base, "hourly");
+			const currentRate = this.getConversionRate(base);
+
+			data = hourlyData.map((r) => {
+				const conversionRate = rateMap.size > 0 ? this.findClosestRate(r.hour, rateMap, currentRate) : currentRate;
+				return {
+					timestamp: r.hour,
+					avg: this.roundPrice(r.price_avg * conversionRate),
+					min: this.roundPrice(r.price_min * conversionRate),
+					max: this.roundPrice(r.price_max * conversionRate),
+					open: this.roundPrice(r.price_open * conversionRate),
+					close: this.roundPrice(r.price_close * conversionRate),
+					sampleCount: r.sample_count,
+				};
+			});
+		} else {
+			const conversionRate = this.getConversionRate(base);
+			data = hourlyData.map((r) => ({
+				timestamp: r.hour,
+				avg: this.roundPrice(r.price_avg * conversionRate),
+				min: this.roundPrice(r.price_min * conversionRate),
+				max: this.roundPrice(r.price_max * conversionRate),
+				open: this.roundPrice(r.price_open * conversionRate),
+				close: this.roundPrice(r.price_close * conversionRate),
+				sampleCount: r.sample_count,
+			}));
+		}
 
 		return {
 			symbol,
@@ -230,24 +346,55 @@ export class HistoryService {
 
 	/**
 	 * Get daily prices for a symbol (all time - all data from daily table)
+	 * @param useHistoricalRates - if true, use historical conversion rates instead of current rate
 	 */
-	async getDailyHistory(symbol: string, assetType: AssetType, base: string = "USD"): Promise<HistoryResponse> {
+	async getDailyHistory(symbol: string, assetType: AssetType, base: string = "USD", useHistoricalRates: boolean = false): Promise<HistoryResponse> {
 		if (!this.recordingEnabled) {
 			throw new Error("History service is not enabled");
 		}
 
-		const conversionRate = this.getConversionRate(base);
 		const dailyData = await this.clickhouse.getAllDailyPrices(symbol, assetType);
 
-		const data: AggregatedPriceRecord[] = dailyData.map((r) => ({
-			timestamp: r.date,
-			avg: this.roundPrice(r.price_avg * conversionRate),
-			min: this.roundPrice(r.price_min * conversionRate),
-			max: this.roundPrice(r.price_max * conversionRate),
-			open: this.roundPrice(r.price_open * conversionRate),
-			close: this.roundPrice(r.price_close * conversionRate),
-			sampleCount: r.sample_count,
-		}));
+		let data: AggregatedPriceRecord[];
+
+		if (base === "USD") {
+			data = dailyData.map((r) => ({
+				timestamp: r.date,
+				avg: this.roundPrice(r.price_avg),
+				min: this.roundPrice(r.price_min),
+				max: this.roundPrice(r.price_max),
+				open: this.roundPrice(r.price_open),
+				close: this.roundPrice(r.price_close),
+				sampleCount: r.sample_count,
+			}));
+		} else if (useHistoricalRates) {
+			const rateMap = await this.getHistoricalConversionRates(base, "daily");
+			const currentRate = this.getConversionRate(base);
+
+			data = dailyData.map((r) => {
+				const conversionRate = rateMap.size > 0 ? this.findClosestRate(r.date, rateMap, currentRate) : currentRate;
+				return {
+					timestamp: r.date,
+					avg: this.roundPrice(r.price_avg * conversionRate),
+					min: this.roundPrice(r.price_min * conversionRate),
+					max: this.roundPrice(r.price_max * conversionRate),
+					open: this.roundPrice(r.price_open * conversionRate),
+					close: this.roundPrice(r.price_close * conversionRate),
+					sampleCount: r.sample_count,
+				};
+			});
+		} else {
+			const conversionRate = this.getConversionRate(base);
+			data = dailyData.map((r) => ({
+				timestamp: r.date,
+				avg: this.roundPrice(r.price_avg * conversionRate),
+				min: this.roundPrice(r.price_min * conversionRate),
+				max: this.roundPrice(r.price_max * conversionRate),
+				open: this.roundPrice(r.price_open * conversionRate),
+				close: this.roundPrice(r.price_close * conversionRate),
+				sampleCount: r.sample_count,
+			}));
+		}
 
 		return {
 			symbol,

@@ -154,6 +154,54 @@ export const openapi = {
 				},
 			},
 		},
+		"/v1/metals/history/{symbol}/currency/{base}": {
+			get: {
+				tags: ["History"],
+				summary: "Get metal raw history in specified currency (last 24 hours)",
+				description: "Returns raw price data converted to the specified currency using historical exchange rates",
+				operationId: "getMetalRawHistoryInCurrency",
+				parameters: [
+					{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "GOLD" } },
+					{ name: "base", in: "path", required: true, schema: { type: "string", example: "EUR" } },
+				],
+				responses: {
+					"200": { content: { "application/json": { schema: { $ref: "#/components/schemas/RawHistoryResponse" } } } },
+					"503": { content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+				},
+			},
+		},
+		"/v1/metals/history/{symbol}/currency/{base}/hourly": {
+			get: {
+				tags: ["History"],
+				summary: "Get metal hourly history in specified currency (last 90 days)",
+				description: "Returns hourly aggregated price data converted to the specified currency using historical exchange rates",
+				operationId: "getMetalHourlyHistoryInCurrency",
+				parameters: [
+					{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "GOLD" } },
+					{ name: "base", in: "path", required: true, schema: { type: "string", example: "EUR" } },
+				],
+				responses: {
+					"200": { content: { "application/json": { schema: { $ref: "#/components/schemas/AggregatedHistoryResponse" } } } },
+					"503": { content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+				},
+			},
+		},
+		"/v1/metals/history/{symbol}/currency/{base}/daily": {
+			get: {
+				tags: ["History"],
+				summary: "Get metal daily history in specified currency (all time)",
+				description: "Returns daily aggregated price data converted to the specified currency using historical exchange rates",
+				operationId: "getMetalDailyHistoryInCurrency",
+				parameters: [
+					{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "GOLD" } },
+					{ name: "base", in: "path", required: true, schema: { type: "string", example: "EUR" } },
+				],
+				responses: {
+					"200": { content: { "application/json": { schema: { $ref: "#/components/schemas/AggregatedHistoryResponse" } } } },
+					"503": { content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+				},
+			},
+		},
 		// Crypto endpoints
 		"/v1/crypto/rates": {
 			get: {
@@ -208,6 +256,54 @@ export const openapi = {
 				},
 			},
 		},
+		"/v1/crypto/history/{symbol}/currency/{base}": {
+			get: {
+				tags: ["History"],
+				summary: "Get crypto raw history in specified currency (last 24 hours)",
+				description: "Returns raw price data converted to the specified currency using historical exchange rates",
+				operationId: "getCryptoRawHistoryInCurrency",
+				parameters: [
+					{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "BTC" } },
+					{ name: "base", in: "path", required: true, schema: { type: "string", example: "EUR" } },
+				],
+				responses: {
+					"200": { content: { "application/json": { schema: { $ref: "#/components/schemas/RawHistoryResponse" } } } },
+					"503": { content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+				},
+			},
+		},
+		"/v1/crypto/history/{symbol}/currency/{base}/hourly": {
+			get: {
+				tags: ["History"],
+				summary: "Get crypto hourly history in specified currency (last 90 days)",
+				description: "Returns hourly aggregated price data converted to the specified currency using historical exchange rates",
+				operationId: "getCryptoHourlyHistoryInCurrency",
+				parameters: [
+					{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "BTC" } },
+					{ name: "base", in: "path", required: true, schema: { type: "string", example: "EUR" } },
+				],
+				responses: {
+					"200": { content: { "application/json": { schema: { $ref: "#/components/schemas/AggregatedHistoryResponse" } } } },
+					"503": { content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+				},
+			},
+		},
+		"/v1/crypto/history/{symbol}/currency/{base}/daily": {
+			get: {
+				tags: ["History"],
+				summary: "Get crypto daily history in specified currency (all time)",
+				description: "Returns daily aggregated price data converted to the specified currency using historical exchange rates",
+				operationId: "getCryptoDailyHistoryInCurrency",
+				parameters: [
+					{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "BTC" } },
+					{ name: "base", in: "path", required: true, schema: { type: "string", example: "EUR" } },
+				],
+				responses: {
+					"200": { content: { "application/json": { schema: { $ref: "#/components/schemas/AggregatedHistoryResponse" } } } },
+					"503": { content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+				},
+			},
+		},
 		// Stock endpoints
 		"/v1/stocks/rates": {
 			get: {
@@ -256,6 +352,54 @@ export const openapi = {
 				summary: "Get stock daily history (all time)",
 				operationId: "getStockDailyHistory",
 				parameters: [{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "MSFT" } }],
+				responses: {
+					"200": { content: { "application/json": { schema: { $ref: "#/components/schemas/AggregatedHistoryResponse" } } } },
+					"503": { content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+				},
+			},
+		},
+		"/v1/stocks/history/{symbol}/currency/{base}": {
+			get: {
+				tags: ["History"],
+				summary: "Get stock raw history in specified currency (last 24 hours)",
+				description: "Returns raw price data converted to the specified currency using historical exchange rates",
+				operationId: "getStockRawHistoryInCurrency",
+				parameters: [
+					{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "MSFT" } },
+					{ name: "base", in: "path", required: true, schema: { type: "string", example: "EUR" } },
+				],
+				responses: {
+					"200": { content: { "application/json": { schema: { $ref: "#/components/schemas/RawHistoryResponse" } } } },
+					"503": { content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+				},
+			},
+		},
+		"/v1/stocks/history/{symbol}/currency/{base}/hourly": {
+			get: {
+				tags: ["History"],
+				summary: "Get stock hourly history in specified currency (last 90 days)",
+				description: "Returns hourly aggregated price data converted to the specified currency using historical exchange rates",
+				operationId: "getStockHourlyHistoryInCurrency",
+				parameters: [
+					{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "MSFT" } },
+					{ name: "base", in: "path", required: true, schema: { type: "string", example: "EUR" } },
+				],
+				responses: {
+					"200": { content: { "application/json": { schema: { $ref: "#/components/schemas/AggregatedHistoryResponse" } } } },
+					"503": { content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
+				},
+			},
+		},
+		"/v1/stocks/history/{symbol}/currency/{base}/daily": {
+			get: {
+				tags: ["History"],
+				summary: "Get stock daily history in specified currency (all time)",
+				description: "Returns daily aggregated price data converted to the specified currency using historical exchange rates",
+				operationId: "getStockDailyHistoryInCurrency",
+				parameters: [
+					{ name: "symbol", in: "path", required: true, schema: { type: "string", example: "MSFT" } },
+					{ name: "base", in: "path", required: true, schema: { type: "string", example: "EUR" } },
+				],
 				responses: {
 					"200": { content: { "application/json": { schema: { $ref: "#/components/schemas/AggregatedHistoryResponse" } } } },
 					"503": { content: { "application/json": { schema: { $ref: "#/components/schemas/ErrorResponse" } } } },
