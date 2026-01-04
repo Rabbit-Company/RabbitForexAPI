@@ -202,6 +202,8 @@ const RabbitForexIndicator = GObject.registerClass(
 			this._rates = {};
 			this._timestamps = {};
 			this._previousRates = {};
+			this._previousTimestamps = {};
+			this._lastKnownTimestamps = {};
 			this._referenceRates = {};
 			this._updateTimeout = null;
 			this._historyFetchTimeout = null;
@@ -355,17 +357,13 @@ const RabbitForexIndicator = GObject.registerClass(
 		}
 
 		async _fetchAllRates() {
-			// Store current rates as previous before fetching new ones
 			const mode = this._settings.get_string("price-change-mode");
+
+			const ratesBeforeFetch = {};
 			if (mode === "previous-update") {
 				for (const category of CATEGORIES) {
 					if (this._rates[category]) {
-						if (!this._previousRates[category]) {
-							this._previousRates[category] = {};
-						}
-						for (const symbol of Object.keys(this._rates[category])) {
-							this._previousRates[category][symbol] = this._rates[category][symbol];
-						}
+						ratesBeforeFetch[category] = { ...this._rates[category] };
 					}
 				}
 			}
@@ -376,7 +374,56 @@ const RabbitForexIndicator = GObject.registerClass(
 				}
 			}
 
+			// For previous-update mode: only update previousRates when backend timestamp changes
+			if (mode === "previous-update") {
+				for (const category of CATEGORIES) {
+					if (this._rates[category] && this._timestamps[category]) {
+						const currentTimestamp = this._getRelevantTimestamp(category);
+						const lastKnownTimestamp = this._lastKnownTimestamps[category];
+
+						// Check if the backend has actually updated the prices
+						if (currentTimestamp && currentTimestamp !== lastKnownTimestamp) {
+							// Backend has new data - the rates we had before this fetch become "previous"
+							if (ratesBeforeFetch[category]) {
+								if (!this._previousRates[category]) {
+									this._previousRates[category] = {};
+								}
+								if (!this._previousTimestamps[category]) {
+									this._previousTimestamps[category] = {};
+								}
+
+								for (const symbol of Object.keys(ratesBeforeFetch[category])) {
+									this._previousRates[category][symbol] = ratesBeforeFetch[category][symbol];
+									this._previousTimestamps[category][symbol] = lastKnownTimestamp;
+								}
+							}
+
+							// Update the last known timestamp
+							this._lastKnownTimestamps[category] = currentTimestamp;
+						}
+					}
+				}
+			}
+
 			this._updateDisplay();
+		}
+
+		_getRelevantTimestamp(category) {
+			const timestamps = this._timestamps[category];
+			if (!timestamps) return null;
+
+			switch (category) {
+				case "fiat":
+					return timestamps.currency;
+				case "metals":
+					return timestamps.metal || timestamps.currency;
+				case "crypto":
+					return timestamps.crypto || timestamps.currency;
+				case "stocks":
+					return timestamps.stock || timestamps.currency;
+				default:
+					return null;
+			}
 		}
 
 		_hasWatchedItems(category) {
@@ -545,9 +592,10 @@ const RabbitForexIndicator = GObject.registerClass(
 			const currentPrice = this._getRawPrice(currentRate, category);
 			const referencePrice = this._getRawPrice(referenceRate, category);
 
-			const epsilon = 0.0000001;
+			const minPercentThreshold = 0.01;
+			const percentChange = referencePrice !== 0 ? Math.abs((currentPrice - referencePrice) / referencePrice) * 100 : 0;
 
-			if (Math.abs(currentPrice - referencePrice) < epsilon) {
+			if (percentChange < minPercentThreshold) {
 				return PRICE_DIRECTION.UNCHANGED;
 			} else if (currentPrice > referencePrice) {
 				return PRICE_DIRECTION.UP;
@@ -593,7 +641,7 @@ const RabbitForexIndicator = GObject.registerClass(
 
 		_applyTemplate(template, symbol, formattedRate, change, percent) {
 			const changeStr = this._formatNumber(Math.abs(change));
-			const percentStr = Math.abs(percent) < 0.01 ? Math.abs(percent).toFixed(4) : Math.abs(percent).toFixed(2);
+			const percentStr = Math.abs(percent).toFixed(2);
 
 			return template.replace("{symbol}", symbol).replace("{rate}", formattedRate).replace("{change}", changeStr).replace("{percent}", percentStr);
 		}
@@ -978,12 +1026,16 @@ export default class RabbitForexExtension extends Extension {
 		let rates = {};
 		let timestamps = {};
 		let previousRates = {};
+		let previousTimestamps = {};
+		let lastKnownTimestamps = {};
 		let referenceRates = {};
 
 		if (preserveState && this._indicator) {
 			rates = this._indicator._rates;
 			timestamps = this._indicator._timestamps;
 			previousRates = this._indicator._previousRates;
+			previousTimestamps = this._indicator._previousTimestamps;
+			lastKnownTimestamps = this._indicator._lastKnownTimestamps;
 			referenceRates = this._indicator._referenceRates;
 			this._indicator.destroy();
 			this._indicator = null;
@@ -995,6 +1047,8 @@ export default class RabbitForexExtension extends Extension {
 			this._indicator._rates = rates;
 			this._indicator._timestamps = timestamps;
 			this._indicator._previousRates = previousRates;
+			this._indicator._previousTimestamps = previousTimestamps;
+			this._indicator._lastKnownTimestamps = lastKnownTimestamps;
 			this._indicator._referenceRates = referenceRates;
 		}
 
