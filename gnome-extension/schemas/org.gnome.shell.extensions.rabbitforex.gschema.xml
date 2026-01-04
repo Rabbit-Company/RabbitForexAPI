@@ -35,10 +35,9 @@
 		</key>
 
 		<key name="panel-sort-order" type="s">
-			<default>'none'</default>
+			<default>'price-desc'</default>
 			<summary>Panel sort order</summary>
-			<description>How to sort panel items: none (as configured), symbol-asc, symbol-desc,
-				price-asc, price-desc</description>
+			<description>How to sort panel items: none, symbol-asc, symbol-desc, price-asc, price-desc</description>
 		</key>
 
 		<key name="panel-position" type="s">
@@ -62,14 +61,45 @@
 		<key name="panel-item-template" type="s">
 			<default>' &lt;span color=&quot;#BFBFBF&quot;&gt;{rate}&lt;/span&gt; &lt;span color=&quot;#7F7F7F&quot;&gt;{symbol}&lt;/span&gt; '</default>
 			<summary>Panel item template</summary>
-			<description>Template for displaying items in the panel. Use {symbol} and {rate} as placeholders.</description>
+			<description>Template for displaying items in the panel. Use {symbol}, {rate}, {change}, {percent} as placeholders.</description>
+		</key>
+
+		<!-- Price Change Indicator Settings -->
+		<key name="price-change-mode" type="s">
+			<default>'previous-update'</default>
+			<summary>Price change indicator mode</summary>
+			<description>How to determine price change: none, previous-update, hour-ago, day-start, day-ago</description>
+		</key>
+
+		<key name="panel-item-template-up" type="s">
+			<default>' &lt;span color=&quot;#69F0AE&quot;&gt;{rate}&lt;/span&gt; &lt;span color=&quot;#7F7F7F&quot;&gt;{symbol}&lt;/span&gt; '</default>
+			<summary>Panel item template for price increase</summary>
+			<description>Template for displaying items when price has increased. Use {symbol}, {rate}, {change}, {percent} as placeholders.</description>
+		</key>
+
+		<key name="panel-item-template-down" type="s">
+			<default>' &lt;span color=&quot;#FF6B6B&quot;&gt;{rate}&lt;/span&gt; &lt;span color=&quot;#7F7F7F&quot;&gt;{symbol}&lt;/span&gt; '</default>
+			<summary>Panel item template for price decrease</summary>
+			<description>Template for displaying items when price has decreased. Use {symbol}, {rate}, {change}, {percent} as placeholders.</description>
 		</key>
 
 		<!-- Menu Settings -->
 		<key name="menu-item-template" type="s">
-			<default>'{symbol}: {rate}'</default>
+			<default>'&lt;span color=&quot;#FFFFFF&quot;&gt;{symbol}: {rate}&lt;/span&gt;'</default>
 			<summary>Menu item template</summary>
-			<description>Template for displaying items in the dropdown menu. Use {symbol} and {rate} as placeholders.</description>
+			<description>Template for displaying items in the dropdown menu. Use {symbol}, {rate}, {change}, {percent} as placeholders.</description>
+		</key>
+
+		<key name="menu-item-template-up" type="s">
+			<default>'&lt;span color=&quot;#69F0AE&quot;&gt;{symbol}: {rate} (+{percent}%)&lt;/span&gt;'</default>
+			<summary>Menu item template for price increase</summary>
+			<description>Template for displaying items in menu when price has increased.</description>
+		</key>
+
+		<key name="menu-item-template-down" type="s">
+			<default>'&lt;span color=&quot;#FF6B6B&quot;&gt;{symbol}: {rate} (-{percent}%)&lt;/span&gt;'</default>
+			<summary>Menu item template for price decrease</summary>
+			<description>Template for displaying items in menu when price has decreased.</description>
 		</key>
 
 		<!-- Clipboard Settings -->
@@ -82,9 +112,7 @@
 		<key name="clipboard-template" type="s">
 			<default>'{symbol}: {rate}'</default>
 			<summary>Clipboard template</summary>
-			<description>Template for copying to clipboard when using display format. Use {symbol}
-				and
-				{rate} as placeholders.</description>
+			<description>Template for copying to clipboard when using display format. Use {symbol} and {rate} as placeholders.</description>
 		</key>
 
 		<key name="clipboard-format" type="s">
