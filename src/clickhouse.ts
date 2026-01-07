@@ -1,6 +1,7 @@
 import { createClient, type ClickHouseClient, type ClickHouseSettings } from "@clickhouse/client";
 import { Logger } from "./logger";
 import type { AssetType } from "./types";
+import { clickhouseResponseDuration } from "./metrics";
 
 export interface ClickHouseConfig {
 	host: string;
@@ -163,6 +164,7 @@ export class ClickHouseWrapper {
 		};
 
 		try {
+			const start = process.hrtime.bigint();
 			await this.client.insert({
 				table: "prices_raw",
 				values: prices.map((p) => ({
@@ -173,6 +175,8 @@ export class ClickHouseWrapper {
 				})),
 				format: "JSONEachRow",
 			});
+			const end = process.hrtime.bigint();
+			clickhouseResponseDuration.labels({ method: "insertPrices", type: "batch" }).observe(Number(end - start) / 1_000_000_000);
 
 			Logger.debug(`[ClickHouse] Inserted ${prices.length} price records`);
 		} catch (error: any) {
@@ -206,10 +210,13 @@ export class ClickHouseWrapper {
 			ORDER BY timestamp ASC
 		`;
 
+		const start = process.hrtime.bigint();
 		const result = await this.client.query({
 			query,
 			format: "JSONEachRow",
 		});
+		const end = process.hrtime.bigint();
+		clickhouseResponseDuration.labels({ method: "getAllRawPrices", type: assetType }).observe(Number(end - start) / 1_000_000_000);
 
 		return result.json();
 	}
@@ -283,10 +290,13 @@ export class ClickHouseWrapper {
 			ORDER BY hour ASC
 		`;
 
+		const start = process.hrtime.bigint();
 		const result = await this.client.query({
 			query,
 			format: "JSONEachRow",
 		});
+		const end = process.hrtime.bigint();
+		clickhouseResponseDuration.labels({ method: "getAllHourlyPrices", type: assetType }).observe(Number(end - start) / 1_000_000_000);
 
 		return result.json();
 	}
@@ -391,10 +401,13 @@ export class ClickHouseWrapper {
 			ORDER BY date ASC
 		`;
 
+		const start = process.hrtime.bigint();
 		const result = await this.client.query({
 			query,
 			format: "JSONEachRow",
 		});
+		const end = process.hrtime.bigint();
+		clickhouseResponseDuration.labels({ method: "getAllDailyPrices", type: assetType }).observe(Number(end - start) / 1_000_000_000);
 
 		return result.json();
 	}

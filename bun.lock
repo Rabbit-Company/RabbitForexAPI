@@ -5,7 +5,7 @@
     "": {
       "name": "rabbitforexapi",
       "dependencies": {
-        "@clickhouse/client": "^1.15.0",
+        "@clickhouse/client": "^1.16.0",
         "@rabbit-company/openmetrics-client": "^2.0.1",
         "@rabbit-company/web": "^0.16.0",
         "@rabbit-company/web-middleware": "^0.16.0",
@@ -19,9 +19,9 @@
     },
   },
   "packages": {
-    "@clickhouse/client": ["@clickhouse/client@1.15.0", "", { "dependencies": { "@clickhouse/client-common": "1.15.0" } }, "sha512-QmW+p4c/r0oa3X6Un6lcBs4GZtJEQUdvf//x8GeqM5ru6m4oIUg3WwvermP3HE31kpEGoFOQfKbMN5ooR5gvNw=="],
+    "@clickhouse/client": ["@clickhouse/client@1.16.0", "", { "dependencies": { "@clickhouse/client-common": "1.16.0" } }, "sha512-ThPhoRMsKsf/hmBEgWlUsGxFecsr3i+k3JI8JV0Od7UpH2BSmk9VKMGJoyPCrTL0vPUs5rJH+7o4iCqBF09Xvg=="],
 
-    "@clickhouse/client-common": ["@clickhouse/client-common@1.15.0", "", {}, "sha512-/1BXaNNsBzH2w5ALWiH6M9zS+cJwlM9uMnMj9e8ETwvDjJzO+nIYlyxzp8Prc+9pEDZ5iAilZ4F8c0YVCzzNaA=="],
+    "@clickhouse/client-common": ["@clickhouse/client-common@1.16.0", "", {}, "sha512-qMzkI1NmV29ZjFkNpVSvGNfA0c7sCExlufAQMv+V+5xtNeYXnRfdqzmBLIQoq6Pf1ij0kw/wGLD3HQrl7pTFLA=="],
 
     "@rabbit-company/logger": ["@rabbit-company/logger@5.6.0", "", { "peerDependencies": { "typescript": "^5.8.3" } }, "sha512-lVfA2aq+iMUPI7g771LOqfinDy2IU5gY9m/X4OWO1q5ohwKi4fnj2q4sBWVe0NuF3+xUEVTYjYHWTHYYqOzHEw=="],
 
