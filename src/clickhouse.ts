@@ -206,13 +206,17 @@ export class ClickHouseWrapper {
 				price_usd,
 				formatDateTime(timestamp, '%Y-%m-%dT%H:%i:%s.000Z') as timestamp
 			FROM prices_raw
-			WHERE symbol = '${symbol}' AND asset_type = ${assetTypeMap[assetType]}
+			WHERE symbol = {symbol:String} AND asset_type = {assetType:UInt8}
 			ORDER BY timestamp ASC
 		`;
 
 		const start = process.hrtime.bigint();
 		const result = await this.client.query({
 			query,
+			query_params: {
+				symbol: symbol,
+				assetType: assetTypeMap[assetType],
+			},
 			format: "JSONEachRow",
 		});
 		const end = process.hrtime.bigint();
@@ -267,7 +271,7 @@ export class ClickHouseWrapper {
 					price_close,
 					sample_count
 				FROM prices_hourly FINAL
-				WHERE symbol = '${symbol}' AND asset_type = ${assetTypeMap[assetType]}
+				WHERE symbol = {symbol:String} AND asset_type = {assetType:UInt8}
 
 				UNION ALL
 
@@ -282,8 +286,8 @@ export class ClickHouseWrapper {
 					argMax(price_usd, timestamp) AS price_close,
 					count() AS sample_count
 				FROM prices_raw
-				WHERE symbol = '${symbol}'
-					AND asset_type = ${assetTypeMap[assetType]}
+				WHERE symbol = {symbol:String}
+					AND asset_type = {assetType:UInt8}
 					AND toStartOfHour(timestamp) = toStartOfHour(now())
 				GROUP BY symbol, toStartOfHour(timestamp)
 			)
@@ -293,6 +297,10 @@ export class ClickHouseWrapper {
 		const start = process.hrtime.bigint();
 		const result = await this.client.query({
 			query,
+			query_params: {
+				symbol: symbol,
+				assetType: assetTypeMap[assetType],
+			},
 			format: "JSONEachRow",
 		});
 		const end = process.hrtime.bigint();
@@ -347,7 +355,7 @@ export class ClickHouseWrapper {
 					price_close,
 					sample_count
 				FROM prices_daily FINAL
-				WHERE symbol = '${symbol}' AND asset_type = ${assetTypeMap[assetType]}
+				WHERE symbol = {symbol:String} AND asset_type = {assetType:UInt8}
 
 				UNION ALL
 
@@ -373,8 +381,8 @@ export class ClickHouseWrapper {
 						price_close,
 						sample_count AS samples
 					FROM prices_hourly FINAL
-					WHERE symbol = '${symbol}'
-						AND asset_type = ${assetTypeMap[assetType]}
+					WHERE symbol = {symbol:String}
+						AND asset_type = {assetType:UInt8}
 						AND toDate(hour) = today()
 
 					UNION ALL
@@ -404,6 +412,10 @@ export class ClickHouseWrapper {
 		const start = process.hrtime.bigint();
 		const result = await this.client.query({
 			query,
+			query_params: {
+				symbol: symbol,
+				assetType: assetTypeMap[assetType],
+			},
 			format: "JSONEachRow",
 		});
 		const end = process.hrtime.bigint();
