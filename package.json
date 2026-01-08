@@ -1,6 +1,6 @@
 {
 	"name": "rabbitforexapi",
-	"version": "5.2.1",
+	"version": "5.2.2",
 	"module": "src/index.ts",
 	"type": "module",
 	"private": true,

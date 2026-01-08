@@ -398,8 +398,8 @@ export class ClickHouseWrapper {
 						argMax(price_usd, timestamp) AS price_close,
 						count() AS samples
 					FROM prices_raw
-					WHERE symbol = '${symbol}'
-						AND asset_type = ${assetTypeMap[assetType]}
+					WHERE symbol = {symbol:String}
+						AND asset_type = {assetType:UInt8}
 						AND toStartOfHour(timestamp) = toStartOfHour(now())
 					GROUP BY symbol, toStartOfHour(timestamp)
 				)
