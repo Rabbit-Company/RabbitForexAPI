@@ -1,4 +1,4 @@
-FROM oven/bun:1-alpine
+FROM oven/bun:1-debian
 WORKDIR /usr/src/app
 
 ENV NODE_ENV=production
