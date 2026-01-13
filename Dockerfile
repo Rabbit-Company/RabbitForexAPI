@@ -8,14 +8,14 @@ RUN bun install
 
 COPY src/ ./src/
 
-RUN bun build src/index.ts --outdir dist --target bun --production
+RUN bun build src/index.ts --outfile rabbitforexapi --target bun --compile --production
 
 # ---------- Runtime stage ----------
-FROM oven/bun:1-distroless
+FROM gcr.io/distroless/base-nossl-debian13
 
 WORKDIR /app
 
-COPY --from=builder /app/dist/ /app/
+COPY --from=builder /app/rabbitforexapi /app/
 
 EXPOSE 3000/tcp
-CMD ["index.js"]
+ENTRYPOINT ["/app/rabbitforexapi"]
