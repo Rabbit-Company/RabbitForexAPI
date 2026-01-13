@@ -1,14 +1,21 @@
-FROM oven/bun:1-debian
-WORKDIR /usr/src/app
+# ---------- Build stage ----------
+FROM oven/bun:1 AS builder
 
-ENV NODE_ENV=production
+WORKDIR /app
 
-COPY package.json bun.lock tsconfig.json ./
-
-RUN bun install --frozen-lockfile --production
+COPY package.json ./
+RUN bun install
 
 COPY src/ ./src/
 
-USER bun
+RUN bun build src/index.ts --outdir dist --target bun --production
+
+# ---------- Runtime stage ----------
+FROM oven/bun:1-distroless
+
+WORKDIR /app
+
+COPY --from=builder /app/dist/ /app/
+
 EXPOSE 3000/tcp
-ENTRYPOINT [ "bun", "run", "start" ]
+CMD ["index.js"]
