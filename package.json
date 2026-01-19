@@ -1,6 +1,6 @@
 {
 	"name": "rabbitforexapi",
-	"version": "5.2.3",
+	"version": "5.2.4",
 	"module": "src/index.ts",
 	"type": "module",
 	"private": true,
@@ -11,12 +11,12 @@
 		"@types/bun": "latest"
 	},
 	"peerDependencies": {
-		"typescript": "^5"
+		"typescript": "^5.9.3"
 	},
 	"dependencies": {
 		"@clickhouse/client": "^1.16.0",
 		"@rabbit-company/openmetrics-client": "^2.0.1",
-		"@rabbit-company/web": "^0.16.0",
-		"@rabbit-company/web-middleware": "^0.16.0"
+		"@rabbit-company/web": "^0.17.0",
+		"@rabbit-company/web-middleware": "^0.17.0"
 	}
 }
