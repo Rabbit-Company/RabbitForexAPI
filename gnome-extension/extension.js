@@ -252,6 +252,8 @@ const RabbitForexIndicator = GObject.registerClass(
 			let resolution = "";
 			if (mode === "day-start" || mode === "day-ago") {
 				resolution = "/hourly";
+			} else if (mode === "week-start" || mode === "week-ago" || mode === "month-start" || mode === "month-ago") {
+				resolution = "/daily";
 			}
 
 			switch (category) {
@@ -339,9 +341,14 @@ const RabbitForexIndicator = GObject.registerClass(
 				return;
 			}
 
-			// Fetch historical data every 5 minutes for hour-ago mode
-			// and every 15 minutes for day modes
-			const interval = mode === "hour-ago" ? 300 : 900;
+			let interval;
+			if (mode === "hour-ago") {
+				interval = 300;
+			} else if (mode === "day-start" || mode === "day-ago") {
+				interval = 900;
+			} else {
+				interval = 1800;
+			}
 
 			this._historyFetchTimeout = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, interval, () => {
 				this._fetchHistoricalRatesIfNeeded();
@@ -543,6 +550,46 @@ const RabbitForexIndicator = GObject.registerClass(
 				// Find the data point closest to 24 hours ago
 				const targetTime = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 				return this._findPriceAtOrBefore(dataPoints, targetTime, category);
+			} else if (mode === "week-ago") {
+				// Find the data point closest to 7 days ago
+				const targetTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+				return this._findPriceAtOrBefore(dataPoints, targetTime, category);
+			} else if (mode === "week-start") {
+				const firstDayOfWeek = this._settings.get_string("first-day-of-week");
+
+				const dayMap = {
+					sunday: 0,
+					monday: 1,
+					tuesday: 2,
+					wednesday: 3,
+					thursday: 4,
+					friday: 5,
+					saturday: 6,
+				};
+
+				const targetDayNum = dayMap[firstDayOfWeek] ?? 1; // Default to Monday
+
+				const startOfWeek = new Date(now);
+				startOfWeek.setUTCHours(0, 0, 0, 0);
+
+				const currentDayNum = startOfWeek.getUTCDay();
+
+				// Calculate days since the target first day of week
+				let daysSinceFirstDay = currentDayNum - targetDayNum;
+				if (daysSinceFirstDay < 0) {
+					daysSinceFirstDay += 7;
+				}
+
+				startOfWeek.setUTCDate(startOfWeek.getUTCDate() - daysSinceFirstDay);
+				return this._findPriceAtOrBefore(dataPoints, startOfWeek, category);
+			} else if (mode === "month-ago") {
+				// Find the data point closest to 30 days ago
+				const targetTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+				return this._findPriceAtOrBefore(dataPoints, targetTime, category);
+			} else if (mode === "month-start") {
+				// Find the data point for the start of this month (1st day 00:00 UTC)
+				const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
+				return this._findPriceAtOrBefore(dataPoints, startOfMonth, category);
 			}
 
 			return null;
@@ -552,9 +599,14 @@ const RabbitForexIndicator = GObject.registerClass(
 			const target = targetTime.getTime();
 
 			for (let i = dataPoints.length - 1; i >= 0; i--) {
-				const t = Date.parse(dataPoints[i].timestamp);
+				const dp = dataPoints[i];
+				let timestamp = dp.timestamp;
+				if (timestamp && timestamp.length === 10 && timestamp.includes("-")) {
+					timestamp = timestamp + "T00:00:00Z";
+				}
+				const t = Date.parse(timestamp);
 				if (t <= target) {
-					const price = dataPoints[i].price ?? dataPoints[i].open ?? dataPoints[i].avg;
+					const price = dp.price ?? dp.open ?? dp.avg;
 					if (price === undefined) return null;
 					return category === "fiat" ? 1 / price : price;
 				}
@@ -1000,7 +1052,7 @@ const RabbitForexIndicator = GObject.registerClass(
 
 			super.destroy();
 		}
-	}
+	},
 );
 
 export default class RabbitForexExtension extends Extension {

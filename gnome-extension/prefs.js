@@ -232,6 +232,20 @@ const PRICE_CHANGE_MODES = [
 	{ id: "hour-ago", label: "1 hour ago" },
 	{ id: "day-start", label: "Start of day" },
 	{ id: "day-ago", label: "24 hours ago" },
+	{ id: "week-start", label: "Start of week" },
+	{ id: "week-ago", label: "7 days ago" },
+	//{ id: "month-start", label: "Start of month" },
+	//{ id: "month-ago", label: "30 days ago" }, Enable after 2026-02-03, when we will have at least 30 days worth of data
+];
+
+const FIRST_DAY_OF_WEEK_OPTIONS = [
+	{ id: "monday", label: "Monday" },
+	{ id: "tuesday", label: "Tuesday" },
+	{ id: "wednesday", label: "Wednesday" },
+	{ id: "thursday", label: "Thursday" },
+	{ id: "friday", label: "Friday" },
+	{ id: "saturday", label: "Saturday" },
+	{ id: "sunday", label: "Sunday" },
 ];
 
 export default class RabbitForexPreferences extends ExtensionPreferences {
@@ -412,8 +426,33 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		priceChangeModeRow.connect("notify::selected", () => {
 			const selected = PRICE_CHANGE_MODES[priceChangeModeRow.selected].id;
 			settings.set_string("price-change-mode", selected);
+			// Show/hide first day of week based on mode
+			firstDayOfWeekRow.visible = selected === "week-start";
 		});
 		priceChangeGroup.add(priceChangeModeRow);
+
+		const firstDayOfWeekModel = new Gtk.StringList();
+		for (const day of FIRST_DAY_OF_WEEK_OPTIONS) {
+			firstDayOfWeekModel.append(day.label);
+		}
+		const firstDayOfWeekRow = new Adw.ComboRow({
+			title: "First Day of Week",
+			subtitle: "Which day starts the week for 'Start of week' mode",
+			model: firstDayOfWeekModel,
+		});
+
+		const currentFirstDay = settings.get_string("first-day-of-week");
+		const firstDayIndex = FIRST_DAY_OF_WEEK_OPTIONS.findIndex((d) => d.id === currentFirstDay);
+		firstDayOfWeekRow.selected = firstDayIndex >= 0 ? firstDayIndex : 0;
+
+		// Only show when week-start mode is selected
+		firstDayOfWeekRow.visible = currentPriceChangeMode === "week-start";
+
+		firstDayOfWeekRow.connect("notify::selected", () => {
+			const selected = FIRST_DAY_OF_WEEK_OPTIONS[firstDayOfWeekRow.selected].id;
+			settings.set_string("first-day-of-week", selected);
+		});
+		priceChangeGroup.add(firstDayOfWeekRow);
 
 		const templateUpRow = new Adw.EntryRow({ title: "Panel Template (Price Up)" });
 		templateUpRow.text = settings.get_string("panel-item-template-up");
@@ -653,6 +692,43 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 			settings.set_int("update-interval", adj.value);
 		});
 		updateGroup.add(intervalRow);
+
+		// Support & Donations Group
+		const donationGroup = new Adw.PreferencesGroup({
+			title: "Support the Project",
+			description: "Help cover server costs and support development",
+		});
+		generalPage.add(donationGroup);
+
+		const donationRow = new Adw.ActionRow({
+			title: "💝 Donate",
+			subtitle: "Support Rabbit Forex with a donation",
+			activatable: true,
+		});
+
+		const donationLinkIcon = new Gtk.Image({
+			icon_name: "emblem-web-symbolic",
+			valign: Gtk.Align.CENTER,
+		});
+		donationRow.add_suffix(donationLinkIcon);
+
+		const donationArrow = new Gtk.Image({
+			icon_name: "go-next-symbolic",
+			valign: Gtk.Align.CENTER,
+		});
+		donationRow.add_suffix(donationArrow);
+
+		donationRow.connect("activated", () => {
+			Gio.AppInfo.launch_default_for_uri("https://rabbit-company.com/donation", null);
+		});
+		donationGroup.add(donationRow);
+
+		const aboutRow = new Adw.ActionRow({
+			title: "Your support helps keep this extension free and maintained",
+			subtitle: "Thank you for using Rabbit Forex! ❤️",
+		});
+		aboutRow.sensitive = false;
+		donationGroup.add(aboutRow);
 
 		// Category Pages
 		const categories = ["fiat", "metals", "crypto", "stocks"];

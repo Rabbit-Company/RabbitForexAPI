@@ -68,7 +68,13 @@
 		<key name="price-change-mode" type="s">
 			<default>'previous-update'</default>
 			<summary>Price change indicator mode</summary>
-			<description>How to determine price change: none, previous-update, hour-ago, day-start, day-ago</description>
+			<description>How to determine price change: none, previous-update, hour-ago, day-start, day-ago, week-start, week-ago, month-start, month-ago</description>
+		</key>
+
+		<key name="first-day-of-week" type="s">
+			<default>'monday'</default>
+			<summary>First day of the week</summary>
+			<description>Which day is considered the first day of the week for "Start of week" mode: monday, tuesday, wednesday, thursday, friday, saturday, sunday</description>
 		</key>
 
 		<key name="panel-item-template-up" type="s">
