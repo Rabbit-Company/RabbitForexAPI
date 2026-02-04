@@ -4,11 +4,13 @@ import Gio from "gi://Gio";
 import Soup from "gi://Soup";
 import St from "gi://St";
 import Clutter from "gi://Clutter";
+import Cairo from "gi://cairo";
 
 import { Extension } from "resource:///org/gnome/shell/extensions/extension.js";
 import * as PanelMenu from "resource:///org/gnome/shell/ui/panelMenu.js";
 import * as PopupMenu from "resource:///org/gnome/shell/ui/popupMenu.js";
 import * as Main from "resource:///org/gnome/shell/ui/main.js";
+import * as ModalDialog from "resource:///org/gnome/shell/ui/modalDialog.js";
 
 const API_BASE = "https://forex.rabbitmonitor.com/v1";
 const TROY_OUNCE_TO_GRAM = 31.1034768;
@@ -838,11 +840,17 @@ const RabbitForexIndicator = GObject.registerClass(
 						rateItem.label.clutter_text.set_markup(`    ${menuItemText}`);
 
 						rateItem.connect("activate", () => {
-							const clipboardText = this._getClipboardText(symbol, rawPrice, displayRate, primaryCurrency, category);
-							const clipboard = St.Clipboard.get_default();
-							clipboard.set_text(St.ClipboardType.CLIPBOARD, clipboardText);
-							if (this._settings.get_boolean("clipboard-notification")) {
-								Main.notify("Copied to clipboard", clipboardText);
+							const clickAction = this._settings.get_string("click-action");
+
+							if (clickAction === "graph") {
+								this._showPriceGraph(symbol, category, primaryCurrency);
+							} else {
+								const clipboardText = this._getClipboardText(symbol, rawPrice, displayRate, primaryCurrency, category);
+								const clipboard = St.Clipboard.get_default();
+								clipboard.set_text(St.ClipboardType.CLIPBOARD, clipboardText);
+								if (this._settings.get_boolean("clipboard-notification")) {
+									Main.notify("Copied to clipboard", clipboardText);
+								}
 							}
 						});
 
@@ -1037,6 +1045,471 @@ const RabbitForexIndicator = GObject.registerClass(
 			const now = new Date();
 			const timeStr = now.toLocaleTimeString();
 			this._timestampItem.label.text = `Last updated: ${timeStr}`;
+		}
+
+		async _showPriceGraph(symbol, category, primaryCurrency) {
+			this.menu.close();
+
+			// Create the dialog
+			const dialog = new ModalDialog.ModalDialog({
+				styleClass: "price-graph-dialog",
+			});
+
+			// Create main content box
+			const contentBox = new St.BoxLayout({
+				vertical: true,
+				style: "spacing: 12px;",
+			});
+
+			// Header row with symbol on left, price on right
+			const headerBox = new St.BoxLayout({
+				style: "spacing: 20px; padding: 0 10px;",
+				x_expand: true,
+			});
+
+			// Left side: symbol and currency badge
+			const leftBox = new St.BoxLayout({
+				style: "spacing: 10px;",
+				x_align: Clutter.ActorAlign.START,
+				y_align: Clutter.ActorAlign.CENTER,
+				x_expand: true,
+			});
+
+			const symbolLabel = new St.Label({
+				text: symbol,
+				style: "font-size: 28px; font-weight: bold;",
+				y_align: Clutter.ActorAlign.CENTER,
+			});
+			leftBox.add_child(symbolLabel);
+
+			// Show unit info for metals
+			let badgeText = primaryCurrency;
+			if (category === "metals") {
+				const metalsUnit = this._settings.get_string("metals-unit");
+				const unitLabel = metalsUnit === "troy-ounce" ? "oz" : "g";
+				badgeText = `${primaryCurrency}/${unitLabel}`;
+			}
+
+			const currencyBadge = new St.Label({
+				text: badgeText,
+				style: "font-size: 13px; color: #888; padding: 4px 10px; border-radius: 4px; background-color: rgba(255,255,255,0.1);",
+				y_align: Clutter.ActorAlign.CENTER,
+			});
+			leftBox.add_child(currencyBadge);
+
+			headerBox.add_child(leftBox);
+
+			// Right side: price and change
+			const rightBox = new St.BoxLayout({
+				style: "spacing: 12px;",
+				x_align: Clutter.ActorAlign.END,
+				y_align: Clutter.ActorAlign.CENTER,
+			});
+
+			// Placeholder for price (will be updated after data loads)
+			this._priceLabel = new St.Label({
+				text: "...",
+				style: "font-size: 28px; font-weight: bold;",
+				y_align: Clutter.ActorAlign.CENTER,
+			});
+			rightBox.add_child(this._priceLabel);
+
+			this._changeLabel = new St.Label({
+				text: "",
+				style: "font-size: 18px;",
+				y_align: Clutter.ActorAlign.CENTER,
+			});
+			rightBox.add_child(this._changeLabel);
+
+			headerBox.add_child(rightBox);
+
+			contentBox.add_child(headerBox);
+
+			// Loading indicator
+			const loadingBox = new St.BoxLayout({
+				vertical: true,
+				style: "padding: 40px;",
+				x_align: Clutter.ActorAlign.CENTER,
+			});
+
+			const loadingLabel = new St.Label({
+				text: "Loading...",
+				style: "font-size: 14px; color: #888;",
+			});
+			loadingBox.add_child(loadingLabel);
+			contentBox.add_child(loadingBox);
+
+			dialog.contentLayout.add_child(contentBox);
+
+			// Add close button
+			dialog.addButton({
+				label: "Close",
+				action: () => {
+					dialog.close();
+				},
+				key: Clutter.KEY_Escape,
+			});
+
+			dialog.open();
+
+			// Fetch and display data
+			try {
+				const historyData = await this._fetchGraphData(symbol, category, primaryCurrency);
+
+				if (historyData && historyData.data && historyData.data.length > 0) {
+					contentBox.remove_child(loadingBox);
+
+					// Process data for the graph
+					const dataPoints = this._processGraphData(historyData.data, category);
+
+					if (dataPoints.length > 0) {
+						// Update price and change in header
+						this._updatePriceLabels(dataPoints, primaryCurrency);
+
+						// Create graph widget
+						const graphWidget = this._createGraphWidget(dataPoints, symbol, primaryCurrency);
+						contentBox.add_child(graphWidget);
+
+						// Add stats below the graph
+						const statsBox = this._createStatsBox(dataPoints, primaryCurrency);
+						contentBox.add_child(statsBox);
+					} else {
+						loadingLabel.text = "No data available";
+						contentBox.add_child(loadingBox);
+					}
+				} else {
+					loadingLabel.text = "No historical data available";
+				}
+			} catch (error) {
+				loadingLabel.text = `Error: ${error.message}`;
+			}
+		}
+
+		_updatePriceLabels(dataPoints, primaryCurrency) {
+			const firstPrice = dataPoints[0].price;
+			const lastPrice = dataPoints[dataPoints.length - 1].price;
+			const change = lastPrice - firstPrice;
+			const changePercent = (change / firstPrice) * 100;
+			const isUp = change >= 0;
+
+			this._priceLabel.text = this._formatPrice(lastPrice, true, primaryCurrency);
+
+			const changeColor = isUp ? "#69F0AE" : "#FF6B6B";
+			const changeIcon = isUp ? "▲" : "▼";
+			this._changeLabel.text = `${changeIcon} ${Math.abs(changePercent).toFixed(2)}%`;
+			this._changeLabel.style = `font-size: 18px; color: ${changeColor};`;
+		}
+
+		_formatPrice(price, includeCurrency = false, primaryCurrency = null) {
+			let formattedPrice = this._formatNumber(price);
+
+			if (includeCurrency && primaryCurrency) {
+				return this._addCurrencySymbol(formattedPrice, primaryCurrency);
+			}
+
+			return formattedPrice;
+		}
+
+		_formatGraphPrice(price, includeCurrency = false, primaryCurrency = null) {
+			let formattedPrice;
+			if (price >= 1000000) {
+				formattedPrice = (price / 1000000).toFixed(1) + "M";
+			} else if (price >= 1000) {
+				formattedPrice = (price / 1000).toFixed(1) + "K";
+			} else if (price >= 1) {
+				formattedPrice = price.toFixed(2);
+			} else if (price >= 0.01) {
+				formattedPrice = price.toFixed(4);
+			} else {
+				formattedPrice = price.toExponential(2);
+			}
+
+			if (includeCurrency && primaryCurrency) {
+				return this._addCurrencySymbol(formattedPrice, primaryCurrency);
+			}
+
+			return formattedPrice;
+		}
+
+		_addCurrencySymbol(formattedPrice, primaryCurrency) {
+			const useCurrencySymbols = this._settings.get_boolean("use-currency-symbols");
+			if (!useCurrencySymbols) {
+				return `${formattedPrice} ${primaryCurrency}`;
+			}
+
+			const currencySymbol = CURRENCY_SYMBOLS[primaryCurrency] || primaryCurrency;
+			const symbolPosition = this._settings.get_string("symbol-position");
+			const isSymbol = CURRENCY_SYMBOLS[primaryCurrency] && CURRENCY_SYMBOLS[primaryCurrency] !== primaryCurrency;
+
+			if (!isSymbol) {
+				return `${formattedPrice} ${primaryCurrency}`;
+			}
+
+			if (symbolPosition === "before") {
+				return `${currencySymbol}${formattedPrice}`;
+			} else {
+				return `${formattedPrice} ${currencySymbol}`;
+			}
+		}
+
+		async _fetchGraphData(symbol, category, primaryCurrency) {
+			let url;
+			switch (category) {
+				case "fiat":
+					url = `${API_BASE}/rates/history/${symbol}/daily`;
+					break;
+				case "metals":
+					url = `${API_BASE}/metals/history/${symbol}/currency/${primaryCurrency}/daily`;
+					break;
+				case "crypto":
+					url = `${API_BASE}/crypto/history/${symbol}/currency/${primaryCurrency}/daily`;
+					break;
+				case "stocks":
+					url = `${API_BASE}/stocks/history/${symbol}/currency/${primaryCurrency}/daily`;
+					break;
+				default:
+					return null;
+			}
+
+			const message = Soup.Message.new("GET", url);
+
+			const bytes = await new Promise((resolve, reject) => {
+				this._httpSession.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
+					try {
+						const bytes = session.send_and_read_finish(result);
+						resolve(bytes);
+					} catch (e) {
+						reject(e);
+					}
+				});
+			});
+
+			if (message.status_code !== 200) {
+				throw new Error(`HTTP ${message.status_code}`);
+			}
+
+			const decoder = new TextDecoder("utf-8");
+			const text = decoder.decode(bytes.get_data());
+			return JSON.parse(text);
+		}
+
+		_processGraphData(dataPoints, category) {
+			const processed = [];
+
+			for (const dp of dataPoints) {
+				let timestamp = dp.timestamp;
+				if (timestamp && timestamp.length === 10 && timestamp.includes("-")) {
+					timestamp = timestamp + "T00:00:00Z";
+				}
+
+				const time = Date.parse(timestamp);
+				let price = dp.price ?? dp.close ?? dp.open ?? dp.avg;
+
+				if (price === undefined) continue;
+
+				// Convert rate to price for fiat
+				if (category === "fiat") {
+					price = 1 / price;
+				}
+
+				// Apply metals unit conversion
+				if (category === "metals") {
+					const metalsUnit = this._settings.get_string("metals-unit");
+					if (metalsUnit === "troy-ounce") {
+						price = price * TROY_OUNCE_TO_GRAM;
+					}
+				}
+
+				processed.push({ time, price, date: timestamp });
+			}
+
+			// Sort by time ascending
+			processed.sort((a, b) => a.time - b.time);
+
+			return processed;
+		}
+
+		_createGraphWidget(dataPoints, symbol, primaryCurrency) {
+			const width = 500;
+			const height = 250;
+			const padding = { top: 20, right: 70, bottom: 40, left: 30 };
+			const graphWidth = width - padding.left - padding.right;
+			const graphHeight = height - padding.top - padding.bottom;
+
+			// Find min/max values
+			const prices = dataPoints.map((d) => d.price);
+			const minPrice = Math.min(...prices);
+			const maxPrice = Math.max(...prices);
+			const priceRange = maxPrice - minPrice || 1;
+
+			// Add some padding to the range
+			const paddedMin = minPrice - priceRange * 0.05;
+			const paddedMax = maxPrice + priceRange * 0.05;
+			const paddedRange = paddedMax - paddedMin;
+
+			const minTime = dataPoints[0].time;
+			const maxTime = dataPoints[dataPoints.length - 1].time;
+			const timeRange = maxTime - minTime || 1;
+
+			// Create drawing area using St.DrawingArea
+			const canvas = new St.DrawingArea({
+				width: width,
+				height: height,
+			});
+
+			canvas.connect("repaint", (area) => {
+				const cr = area.get_context();
+				const [areaWidth, areaHeight] = area.get_surface_size();
+
+				// Determine if price went up or down overall
+				const firstPrice = dataPoints[0].price;
+				const lastPrice = dataPoints[dataPoints.length - 1].price;
+				const isUp = lastPrice >= firstPrice;
+
+				// Draw subtle horizontal grid lines
+				cr.setSourceRGBA(0.5, 0.5, 0.5, 0.2);
+				cr.setLineWidth(1);
+
+				for (let i = 0; i <= 4; i++) {
+					const y = padding.top + (graphHeight * i) / 4;
+					cr.moveTo(padding.left, y);
+					cr.lineTo(width - padding.right, y);
+					cr.stroke();
+				}
+
+				// Draw price labels on the right
+				cr.setSourceRGBA(0.6, 0.6, 0.6, 1);
+				cr.selectFontFace("Sans", Cairo.FontSlant.NORMAL, Cairo.FontWeight.NORMAL);
+				cr.setFontSize(12);
+
+				for (let i = 0; i <= 4; i++) {
+					const y = padding.top + (graphHeight * i) / 4;
+					const price = paddedMax - (paddedRange * i) / 4;
+					const priceText = this._formatGraphPrice(price, true, primaryCurrency);
+					cr.moveTo(width - padding.right + 5, y + 4);
+					cr.showText(priceText);
+				}
+
+				// Draw the line graph
+				if (dataPoints.length > 1) {
+					// Fill area under the line first (gradient effect)
+					const gradient = new Cairo.LinearGradient(0, padding.top, 0, padding.top + graphHeight);
+					if (isUp) {
+						gradient.addColorStopRGBA(0, 0.41, 0.94, 0.68, 0.3);
+						gradient.addColorStopRGBA(1, 0.41, 0.94, 0.68, 0.02);
+					} else {
+						gradient.addColorStopRGBA(0, 1, 0.42, 0.42, 0.3);
+						gradient.addColorStopRGBA(1, 1, 0.42, 0.42, 0.02);
+					}
+
+					cr.moveTo(padding.left + ((dataPoints[0].time - minTime) / timeRange) * graphWidth, padding.top + graphHeight);
+					for (let i = 0; i < dataPoints.length; i++) {
+						const dp = dataPoints[i];
+						const x = padding.left + ((dp.time - minTime) / timeRange) * graphWidth;
+						const y = padding.top + ((paddedMax - dp.price) / paddedRange) * graphHeight;
+						cr.lineTo(x, y);
+					}
+					cr.lineTo(padding.left + ((dataPoints[dataPoints.length - 1].time - minTime) / timeRange) * graphWidth, padding.top + graphHeight);
+					cr.closePath();
+					cr.setSource(gradient);
+					cr.fill();
+
+					// Draw the main line
+					if (isUp) {
+						cr.setSourceRGBA(0.41, 0.94, 0.68, 1); // Green #69F0AE
+					} else {
+						cr.setSourceRGBA(1, 0.42, 0.42, 1); // Red #FF6B6B
+					}
+
+					cr.setLineWidth(2.5);
+					cr.setLineCap(Cairo.LineCap.ROUND);
+					cr.setLineJoin(Cairo.LineJoin.ROUND);
+
+					for (let i = 0; i < dataPoints.length; i++) {
+						const dp = dataPoints[i];
+						const x = padding.left + ((dp.time - minTime) / timeRange) * graphWidth;
+						const y = padding.top + ((paddedMax - dp.price) / paddedRange) * graphHeight;
+
+						if (i === 0) {
+							cr.moveTo(x, y);
+						} else {
+							cr.lineTo(x, y);
+						}
+					}
+					cr.stroke();
+
+					// Draw endpoint dot
+					const lastDp = dataPoints[dataPoints.length - 1];
+					const lastX = padding.left + ((lastDp.time - minTime) / timeRange) * graphWidth;
+					const lastY = padding.top + ((paddedMax - lastDp.price) / paddedRange) * graphHeight;
+
+					cr.arc(lastX, lastY, 4, 0, 2 * Math.PI);
+					cr.fill();
+				}
+
+				// Draw date labels at bottom
+				cr.setSourceRGBA(0.6, 0.6, 0.6, 1);
+				cr.setFontSize(11);
+
+				const numLabels = Math.min(5, dataPoints.length);
+				for (let i = 0; i < numLabels; i++) {
+					const idx = Math.floor((i * (dataPoints.length - 1)) / (numLabels - 1));
+					const dp = dataPoints[idx];
+					const x = padding.left + ((dp.time - minTime) / timeRange) * graphWidth;
+					const dateStr = new Date(dp.time).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+					cr.moveTo(x - 18, height - 10);
+					cr.showText(dateStr);
+				}
+
+				cr.$dispose();
+			});
+
+			return canvas;
+		}
+
+		_createStatsBox(dataPoints, primaryCurrency) {
+			const statsBox = new St.BoxLayout({
+				style: "spacing: 40px; padding-top: 10px;",
+				x_align: Clutter.ActorAlign.CENTER,
+			});
+
+			const minPrice = Math.min(...dataPoints.map((d) => d.price));
+			const maxPrice = Math.max(...dataPoints.map((d) => d.price));
+
+			// Date range
+			const firstDate = new Date(dataPoints[0].time);
+			const lastDate = new Date(dataPoints[dataPoints.length - 1].time);
+			const dateRangeStr = `${firstDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${lastDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+
+			const stats = [
+				{ label: "Period", value: dateRangeStr },
+				{ label: "Low", value: this._formatPrice(minPrice, true, primaryCurrency) },
+				{ label: "High", value: this._formatPrice(maxPrice, true, primaryCurrency) },
+			];
+
+			for (const stat of stats) {
+				const statBox = new St.BoxLayout({
+					vertical: true,
+					style: "spacing: 4px;",
+					x_align: Clutter.ActorAlign.CENTER,
+				});
+
+				const labelWidget = new St.Label({
+					text: stat.label,
+					style: "font-size: 13px; color: #888;",
+				});
+
+				const valueWidget = new St.Label({
+					text: stat.value,
+					style: "font-size: 15px;",
+				});
+
+				statBox.add_child(labelWidget);
+				statBox.add_child(valueWidget);
+				statsBox.add_child(statBox);
+			}
+
+			return statsBox;
 		}
 
 		destroy() {

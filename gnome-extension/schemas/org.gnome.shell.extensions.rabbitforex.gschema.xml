@@ -121,6 +121,12 @@
 		</key>
 
 		<!-- Clipboard Settings -->
+		<key name="click-action" type="s">
+			<default>'graph'</default>
+			<summary>Click action</summary>
+			<description>Action when clicking a rate: graph or clipboard</description>
+		</key>
+
 		<key name="clipboard-notification" type="b">
 			<default>true</default>
 			<summary>Show clipboard notification</summary>

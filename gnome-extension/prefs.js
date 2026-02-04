@@ -207,6 +207,11 @@ const CLIPBOARD_FORMATS = [
 	{ id: "price-only", label: "Raw price" },
 ];
 
+const CLICK_ACTIONS = [
+	{ id: "graph", label: "Show price history graph" },
+	{ id: "clipboard", label: "Copy to clipboard" },
+];
+
 const SYMBOL_POSITIONS = [
 	{ id: "before", label: "Before price ($100)" },
 	{ id: "after", label: "After price (100 $)" },
@@ -449,20 +454,50 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		priceChangeGroup.add(firstDayOfWeekRow);
 
-		// Custom Date Row - Expander with calendar
-		const customDateExpander = new Adw.ExpanderRow({
+		// Custom Date Row - Compact date picker with popover calendar
+		const customDateRow = new Adw.ActionRow({
 			title: "Reference Date",
 			subtitle: "Select a date to compare prices against",
 		});
 
-		// Only show when custom mode is selected
-		customDateExpander.visible = currentPriceChangeMode === "custom";
+		customDateRow.visible = currentPriceChangeMode === "custom";
 
-		// Current date label and refresh button in the header
-		const currentDateLabel = new Gtk.Label({
+		const dateButtonBox = new Gtk.Box({
+			orientation: Gtk.Orientation.HORIZONTAL,
+			spacing: 6,
 			valign: Gtk.Align.CENTER,
-			css_classes: ["dim-label"],
 		});
+
+		// Button that shows the selected date and opens the calendar popover
+		const dateButton = new Gtk.MenuButton({
+			valign: Gtk.Align.CENTER,
+			css_classes: ["flat"],
+		});
+
+		// Calendar in a popover
+		const calendarPopover = new Gtk.Popover();
+		const popoverBox = new Gtk.Box({
+			orientation: Gtk.Orientation.VERTICAL,
+			spacing: 6,
+			margin_start: 6,
+			margin_end: 6,
+			margin_top: 6,
+			margin_bottom: 6,
+		});
+
+		const calendar = new Gtk.Calendar();
+		popoverBox.append(calendar);
+
+		// Info label showing available range
+		const rangeLabel = new Gtk.Label({
+			css_classes: ["dim-label", "caption"],
+			wrap: true,
+			max_width_chars: 25,
+		});
+		popoverBox.append(rangeLabel);
+
+		calendarPopover.set_child(popoverBox);
+		dateButton.set_popover(calendarPopover);
 
 		const fetchDatesButton = new Gtk.Button({
 			icon_name: "view-refresh-symbolic",
@@ -476,21 +511,10 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 			visible: false,
 		});
 
-		customDateExpander.add_suffix(dateSpinner);
-		customDateExpander.add_suffix(currentDateLabel);
-		customDateExpander.add_suffix(fetchDatesButton);
-
-		// Calendar widget
-		const calendar = new Gtk.Calendar({
-			margin_start: 12,
-			margin_end: 12,
-			margin_top: 6,
-			margin_bottom: 6,
-		});
-
-		const calendarRow = new Adw.ActionRow();
-		calendarRow.set_child(calendar);
-		customDateExpander.add_row(calendarRow);
+		dateButtonBox.append(dateButton);
+		dateButtonBox.append(fetchDatesButton);
+		dateButtonBox.append(dateSpinner);
+		customDateRow.add_suffix(dateButtonBox);
 
 		// Track available date range
 		let minAvailableDate = null;
@@ -513,12 +537,22 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 			};
 		};
 
-		const updateDateLabel = () => {
+		// Update the button label with current date
+		const updateButtonLabel = () => {
 			const currentDate = settings.get_string("custom-reference-date");
 			if (currentDate && currentDate.length === 10) {
-				currentDateLabel.label = currentDate;
+				dateButton.label = currentDate;
 			} else {
-				currentDateLabel.label = "Not set";
+				dateButton.label = "Select date...";
+			}
+		};
+
+		// Update range label
+		const updateRangeLabel = () => {
+			if (minAvailableDate && maxAvailableDate) {
+				rangeLabel.label = `Available: ${minAvailableDate} to ${maxAvailableDate}`;
+			} else {
+				rangeLabel.label = "Click refresh to load available dates";
 			}
 		};
 
@@ -532,27 +566,18 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 					calendar.select_day(gdate);
 				}
 			}
-			updateDateLabel();
-		};
-
-		const updateSubtitle = () => {
-			if (minAvailableDate && maxAvailableDate) {
-				customDateExpander.subtitle = `Available: ${minAvailableDate} to ${maxAvailableDate}`;
-			} else {
-				customDateExpander.subtitle = "Click refresh to load available date range";
-			}
+			updateButtonLabel();
 		};
 
 		// Load cached dates and set range
 		const cachedDates = settings.get_strv("available-history-dates");
 		if (cachedDates.length > 0) {
-			// Dates are stored newest first, so last element is oldest
 			maxAvailableDate = cachedDates[0];
 			minAvailableDate = cachedDates[cachedDates.length - 1];
 		}
 
 		initializeCalendar();
-		updateSubtitle();
+		updateRangeLabel();
 
 		// Handle calendar date selection
 		calendar.connect("day-selected", () => {
@@ -585,7 +610,8 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 			}
 
 			settings.set_string("custom-reference-date", dateStr);
-			updateDateLabel();
+			updateButtonLabel();
+			calendarPopover.popdown();
 		});
 
 		// Fetch available dates button
@@ -601,7 +627,7 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 				if (dates.length > 0) {
 					maxAvailableDate = dates[0];
 					minAvailableDate = dates[dates.length - 1];
-					updateSubtitle();
+					updateRangeLabel();
 
 					// If no date is set or current date is out of range, set to most recent
 					const currentDate = settings.get_string("custom-reference-date");
@@ -612,11 +638,11 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 							const gdate = GLib.DateTime.new_utc(parsed.year, parsed.month + 1, parsed.day, 0, 0, 0);
 							calendar.select_day(gdate);
 						}
-						updateDateLabel();
+						updateButtonLabel();
 					}
 				}
 			} catch (error) {
-				customDateExpander.subtitle = `Error: ${error.message}`;
+				rangeLabel.label = `Error: ${error.message}`;
 			}
 
 			dateSpinner.spinning = false;
@@ -624,14 +650,14 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 			fetchDatesButton.sensitive = true;
 		});
 
-		priceChangeGroup.add(customDateExpander);
+		priceChangeGroup.add(customDateRow);
 
 		priceChangeModeRow.connect("notify::selected", () => {
 			const selected = PRICE_CHANGE_MODES[priceChangeModeRow.selected].id;
 			settings.set_string("price-change-mode", selected);
 
 			firstDayOfWeekRow.visible = selected === "week-start";
-			customDateExpander.visible = selected === "custom";
+			customDateRow.visible = selected === "custom";
 		});
 
 		const templateUpRow = new Adw.EntryRow({ title: "Panel Template (Price Up)" });
@@ -772,12 +798,43 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		});
 		symbolsGroup.add(positionRow);
 
-		// Clipboard Group
-		const clipboardGroup = new Adw.PreferencesGroup({
-			title: "Clipboard",
-			description: "Configure what gets copied when clicking a rate",
+		// Click Action Group
+		const clickActionGroup = new Adw.PreferencesGroup({
+			title: "Click Action",
+			description: "Configure what happens when clicking a rate",
 		});
-		generalPage.add(clipboardGroup);
+		generalPage.add(clickActionGroup);
+
+		const clickActionModel = new Gtk.StringList();
+		for (const action of CLICK_ACTIONS) {
+			clickActionModel.append(action.label);
+		}
+
+		const clickActionRow = new Adw.ComboRow({
+			title: "Action",
+			subtitle: "What to do when clicking a rate in the menu",
+			model: clickActionModel,
+		});
+
+		const currentClickAction = settings.get_string("click-action");
+		const clickActionIndex = CLICK_ACTIONS.findIndex((a) => a.id === currentClickAction);
+		clickActionRow.selected = clickActionIndex >= 0 ? clickActionIndex : 0;
+
+		clickActionRow.connect("notify::selected", () => {
+			const selected = CLICK_ACTIONS[clickActionRow.selected].id;
+			settings.set_string("click-action", selected);
+
+			clipboardOptionsGroup.visible = selected === "clipboard";
+		});
+		clickActionGroup.add(clickActionRow);
+
+		// Clipboard Options Group (only visible when click action is clipboard)
+		const clipboardOptionsGroup = new Adw.PreferencesGroup({
+			title: "Clipboard Options",
+			description: "Configure clipboard behavior",
+		});
+		clipboardOptionsGroup.visible = currentClickAction === "clipboard";
+		generalPage.add(clipboardOptionsGroup);
 
 		const clipboardNotificationRow = new Adw.SwitchRow({
 			title: "Show Notification",
@@ -787,7 +844,7 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		clipboardNotificationRow.connect("notify::active", () => {
 			settings.set_boolean("clipboard-notification", clipboardNotificationRow.active);
 		});
-		clipboardGroup.add(clipboardNotificationRow);
+		clipboardOptionsGroup.add(clipboardNotificationRow);
 
 		const clipboardModel = new Gtk.StringList();
 		for (const format of CLIPBOARD_FORMATS) {
@@ -808,21 +865,21 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 			const selected = CLIPBOARD_FORMATS[clipboardRow.selected].id;
 			settings.set_string("clipboard-format", selected);
 		});
-		clipboardGroup.add(clipboardRow);
+		clipboardOptionsGroup.add(clipboardRow);
 
 		const clipboardTemplateRow = new Adw.EntryRow({ title: "Clipboard Template" });
 		clipboardTemplateRow.text = settings.get_string("clipboard-template");
 		clipboardTemplateRow.connect("changed", () => {
 			settings.set_string("clipboard-template", clipboardTemplateRow.text);
 		});
-		clipboardGroup.add(clipboardTemplateRow);
+		clipboardOptionsGroup.add(clipboardTemplateRow);
 
 		const clipboardTemplateHelpRow = new Adw.ActionRow({
 			title: "Template Placeholders",
 			subtitle: "Used when format is 'As displayed'. Use {symbol} and {rate}.",
 		});
 		clipboardTemplateHelpRow.sensitive = false;
-		clipboardGroup.add(clipboardTemplateHelpRow);
+		clipboardOptionsGroup.add(clipboardTemplateHelpRow);
 
 		// Metals Unit Group
 		const metalsGroup = new Adw.PreferencesGroup({
