@@ -68,13 +68,25 @@
 		<key name="price-change-mode" type="s">
 			<default>'previous-update'</default>
 			<summary>Price change indicator mode</summary>
-			<description>How to determine price change: none, previous-update, hour-ago, day-start, day-ago, week-start, week-ago, month-start, month-ago</description>
+			<description>How to determine price change: none, previous-update, hour-ago, day-start, day-ago, week-start, week-ago, month-start, month-ago, custom</description>
 		</key>
 
 		<key name="first-day-of-week" type="s">
 			<default>'monday'</default>
 			<summary>First day of the week</summary>
 			<description>Which day is considered the first day of the week for "Start of week" mode: monday, tuesday, wednesday, thursday, friday, saturday, sunday</description>
+		</key>
+
+		<key name="custom-reference-date" type="s">
+			<default>''</default>
+			<summary>Custom reference date</summary>
+			<description>The custom date to use as reference for price change calculation (YYYY-MM-DD format)</description>
+		</key>
+
+		<key name="available-history-dates" type="as">
+			<default>[]</default>
+			<summary>Available history dates</summary>
+			<description>Cached list of available dates from the API's daily history endpoint</description>
 		</key>
 
 		<key name="panel-item-template-up" type="s">

@@ -235,7 +235,8 @@ const PRICE_CHANGE_MODES = [
 	{ id: "week-start", label: "Start of week" },
 	{ id: "week-ago", label: "7 days ago" },
 	//{ id: "month-start", label: "Start of month" },
-	//{ id: "month-ago", label: "30 days ago" }, Enable after 2026-02-03, when we will have at least 30 days worth of data
+	{ id: "month-ago", label: "30 days ago" },
+	{ id: "custom", label: "Custom date" },
 ];
 
 const FIRST_DAY_OF_WEEK_OPTIONS = [
@@ -423,12 +424,6 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		const priceChangeModeIndex = PRICE_CHANGE_MODES.findIndex((m) => m.id === currentPriceChangeMode);
 		priceChangeModeRow.selected = priceChangeModeIndex >= 0 ? priceChangeModeIndex : 0;
 
-		priceChangeModeRow.connect("notify::selected", () => {
-			const selected = PRICE_CHANGE_MODES[priceChangeModeRow.selected].id;
-			settings.set_string("price-change-mode", selected);
-			// Show/hide first day of week based on mode
-			firstDayOfWeekRow.visible = selected === "week-start";
-		});
 		priceChangeGroup.add(priceChangeModeRow);
 
 		const firstDayOfWeekModel = new Gtk.StringList();
@@ -453,6 +448,191 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 			settings.set_string("first-day-of-week", selected);
 		});
 		priceChangeGroup.add(firstDayOfWeekRow);
+
+		// Custom Date Row - Expander with calendar
+		const customDateExpander = new Adw.ExpanderRow({
+			title: "Reference Date",
+			subtitle: "Select a date to compare prices against",
+		});
+
+		// Only show when custom mode is selected
+		customDateExpander.visible = currentPriceChangeMode === "custom";
+
+		// Current date label and refresh button in the header
+		const currentDateLabel = new Gtk.Label({
+			valign: Gtk.Align.CENTER,
+			css_classes: ["dim-label"],
+		});
+
+		const fetchDatesButton = new Gtk.Button({
+			icon_name: "view-refresh-symbolic",
+			valign: Gtk.Align.CENTER,
+			tooltip_text: "Fetch available date range from server",
+			css_classes: ["flat"],
+		});
+
+		const dateSpinner = new Gtk.Spinner({
+			valign: Gtk.Align.CENTER,
+			visible: false,
+		});
+
+		customDateExpander.add_suffix(dateSpinner);
+		customDateExpander.add_suffix(currentDateLabel);
+		customDateExpander.add_suffix(fetchDatesButton);
+
+		// Calendar widget
+		const calendar = new Gtk.Calendar({
+			margin_start: 12,
+			margin_end: 12,
+			margin_top: 6,
+			margin_bottom: 6,
+		});
+
+		const calendarRow = new Adw.ActionRow();
+		calendarRow.set_child(calendar);
+		customDateExpander.add_row(calendarRow);
+
+		// Track available date range
+		let minAvailableDate = null;
+		let maxAvailableDate = null;
+
+		const formatDate = (year, month, day) => {
+			const y = year.toString();
+			const m = (month + 1).toString().padStart(2, "0");
+			const d = day.toString().padStart(2, "0");
+			return `${y}-${m}-${d}`;
+		};
+
+		const parseDate = (dateStr) => {
+			if (!dateStr || dateStr.length !== 10) return null;
+			const parts = dateStr.split("-");
+			return {
+				year: parseInt(parts[0], 10),
+				month: parseInt(parts[1], 10) - 1,
+				day: parseInt(parts[2], 10),
+			};
+		};
+
+		const updateDateLabel = () => {
+			const currentDate = settings.get_string("custom-reference-date");
+			if (currentDate && currentDate.length === 10) {
+				currentDateLabel.label = currentDate;
+			} else {
+				currentDateLabel.label = "Not set";
+			}
+		};
+
+		// Initialize calendar with current setting
+		const initializeCalendar = () => {
+			const currentDate = settings.get_string("custom-reference-date");
+			const parsed = parseDate(currentDate);
+			if (parsed) {
+				const gdate = GLib.DateTime.new_utc(parsed.year, parsed.month + 1, parsed.day, 0, 0, 0);
+				if (gdate) {
+					calendar.select_day(gdate);
+				}
+			}
+			updateDateLabel();
+		};
+
+		const updateSubtitle = () => {
+			if (minAvailableDate && maxAvailableDate) {
+				customDateExpander.subtitle = `Available: ${minAvailableDate} to ${maxAvailableDate}`;
+			} else {
+				customDateExpander.subtitle = "Click refresh to load available date range";
+			}
+		};
+
+		// Load cached dates and set range
+		const cachedDates = settings.get_strv("available-history-dates");
+		if (cachedDates.length > 0) {
+			// Dates are stored newest first, so last element is oldest
+			maxAvailableDate = cachedDates[0];
+			minAvailableDate = cachedDates[cachedDates.length - 1];
+		}
+
+		initializeCalendar();
+		updateSubtitle();
+
+		// Handle calendar date selection
+		calendar.connect("day-selected", () => {
+			const selectedDate = calendar.get_date();
+			const year = selectedDate.get_year();
+			const month = selectedDate.get_month() - 1;
+			const day = selectedDate.get_day_of_month();
+			const dateStr = formatDate(year, month, day);
+
+			// Check if date is within available range
+			if (minAvailableDate && maxAvailableDate) {
+				if (dateStr < minAvailableDate) {
+					// Date too old, snap to minimum
+					const parsed = parseDate(minAvailableDate);
+					if (parsed) {
+						const gdate = GLib.DateTime.new_utc(parsed.year, parsed.month + 1, parsed.day, 0, 0, 0);
+						calendar.select_day(gdate);
+					}
+					return;
+				}
+				if (dateStr > maxAvailableDate) {
+					// Date too new, snap to maximum
+					const parsed = parseDate(maxAvailableDate);
+					if (parsed) {
+						const gdate = GLib.DateTime.new_utc(parsed.year, parsed.month + 1, parsed.day, 0, 0, 0);
+						calendar.select_day(gdate);
+					}
+					return;
+				}
+			}
+
+			settings.set_string("custom-reference-date", dateStr);
+			updateDateLabel();
+		});
+
+		// Fetch available dates button
+		fetchDatesButton.connect("clicked", async () => {
+			fetchDatesButton.sensitive = false;
+			dateSpinner.visible = true;
+			dateSpinner.spinning = true;
+
+			try {
+				const dates = await this._fetchAvailableHistoryDates();
+				settings.set_strv("available-history-dates", dates);
+
+				if (dates.length > 0) {
+					maxAvailableDate = dates[0];
+					minAvailableDate = dates[dates.length - 1];
+					updateSubtitle();
+
+					// If no date is set or current date is out of range, set to most recent
+					const currentDate = settings.get_string("custom-reference-date");
+					if (!currentDate || currentDate < minAvailableDate || currentDate > maxAvailableDate) {
+						settings.set_string("custom-reference-date", maxAvailableDate);
+						const parsed = parseDate(maxAvailableDate);
+						if (parsed) {
+							const gdate = GLib.DateTime.new_utc(parsed.year, parsed.month + 1, parsed.day, 0, 0, 0);
+							calendar.select_day(gdate);
+						}
+						updateDateLabel();
+					}
+				}
+			} catch (error) {
+				customDateExpander.subtitle = `Error: ${error.message}`;
+			}
+
+			dateSpinner.spinning = false;
+			dateSpinner.visible = false;
+			fetchDatesButton.sensitive = true;
+		});
+
+		priceChangeGroup.add(customDateExpander);
+
+		priceChangeModeRow.connect("notify::selected", () => {
+			const selected = PRICE_CHANGE_MODES[priceChangeModeRow.selected].id;
+			settings.set_string("price-change-mode", selected);
+
+			firstDayOfWeekRow.visible = selected === "week-start";
+			customDateExpander.visible = selected === "custom";
+		});
 
 		const templateUpRow = new Adw.EntryRow({ title: "Panel Template (Price Up)" });
 		templateUpRow.text = settings.get_string("panel-item-template-up");
@@ -946,5 +1126,52 @@ export default class RabbitForexPreferences extends ExtensionPreferences {
 		const data = JSON.parse(text);
 
 		return Object.keys(data.rates).sort();
+	}
+
+	async _fetchAvailableHistoryDates() {
+		// Fetch from the daily history endpoint to get available dates
+		const url = `${API_BASE}/rates/history/EUR/daily`;
+		const session = new Soup.Session();
+		const message = Soup.Message.new("GET", url);
+
+		const bytes = await new Promise((resolve, reject) => {
+			session.send_and_read_async(message, GLib.PRIORITY_DEFAULT, null, (session, result) => {
+				try {
+					const bytes = session.send_and_read_finish(result);
+					resolve(bytes);
+				} catch (e) {
+					reject(e);
+				}
+			});
+		});
+
+		if (message.status_code !== 200) {
+			throw new Error(`HTTP ${message.status_code}`);
+		}
+
+		const decoder = new TextDecoder("utf-8");
+		const text = decoder.decode(bytes.get_data());
+		const data = JSON.parse(text);
+
+		if (!data.data || !Array.isArray(data.data)) {
+			throw new Error("Invalid response format");
+		}
+
+		// Extract unique dates from the data points and sort them (newest first)
+		const dates = data.data
+			.map((dp) => {
+				const ts = dp.timestamp;
+				// Handle both full ISO timestamps and date-only strings
+				if (ts && ts.includes("T")) {
+					return ts.split("T")[0];
+				}
+				return ts;
+			})
+			.filter((date) => date && date.length === 10);
+
+		// Remove duplicates and sort newest first
+		const uniqueDates = [...new Set(dates)].sort().reverse();
+
+		return uniqueDates;
 	}
 }

@@ -252,7 +252,7 @@ const RabbitForexIndicator = GObject.registerClass(
 			let resolution = "";
 			if (mode === "day-start" || mode === "day-ago") {
 				resolution = "/hourly";
-			} else if (mode === "week-start" || mode === "week-ago" || mode === "month-start" || mode === "month-ago") {
+			} else if (mode === "week-start" || mode === "week-ago" || mode === "month-start" || mode === "month-ago" || mode === "custom") {
 				resolution = "/daily";
 			}
 
@@ -590,6 +590,16 @@ const RabbitForexIndicator = GObject.registerClass(
 				// Find the data point for the start of this month (1st day 00:00 UTC)
 				const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
 				return this._findPriceAtOrBefore(dataPoints, startOfMonth, category);
+			} else if (mode === "custom") {
+				// Find the data point for the custom reference date
+				const customDate = this._settings.get_string("custom-reference-date");
+				if (!customDate || customDate.length !== 10) {
+					return null;
+				}
+
+				// Parse the custom date and set to end of day to find data at or before that date
+				const targetTime = new Date(customDate + "T23:59:59Z");
+				return this._findPriceAtOrBefore(dataPoints, targetTime, category);
 			}
 
 			return null;
