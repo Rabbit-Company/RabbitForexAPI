@@ -37,7 +37,6 @@ glib-compile-schemas ~/.local/share/gnome-shell/extensions/rabbitforex@rabbit-co
 ### Enable the Extension
 
 1. Restart GNOME Shell:
-
    - Press `Alt+F2`, type `r`, press `Enter`
    - Or log out and log back in
    - On Wayland: log out and log back in
@@ -95,7 +94,7 @@ rabbitforex@rabbit-company.com/
 
 ## Compatibility
 
-- GNOME Shell 47, 48, 49
+- GNOME Shell 47, 48, 49, 50
 
 ## Troubleshooting
 
