@@ -38,24 +38,19 @@ Currency symbol mapping
 {% endif %}
 
 {% comment %}
-Fetch rates
+Fetch rates (IDX_0..3 = live rates, IDX_4 = daily history of the first configured symbol)
 {% endcomment %}
 {% assign forex = IDX_0 %}
 {% assign metals = IDX_1 %}
 {% assign crypto = IDX_2 %}
 {% assign stocks = IDX_3 %}
+{% assign history = IDX_4 %}
 
-{% comment %}
-Collect all symbols from different asset types
-{% endcomment %}
+{% comment %} Collect all symbols from different asset types {% endcomment %}
 {% assign all_symbols = "" | split: "" %}
 
-{% comment %}
-Process fiat assets
-{% endcomment %}
 {% assign fiat_assets_string = trmnl.plugin_settings.custom_fields_values.fiat_assets %}
 {% assign fiat_assets = fiat_assets_string | split: ',' %}
-
 {% for symbol in fiat_assets %}
   {% assign symbol = symbol | strip %}
   {% if symbol != "" %}
@@ -65,12 +60,8 @@ Process fiat assets
   {% endif %}
 {% endfor %}
 
-{% comment %}
-Process metal assets
-{% endcomment %}
 {% assign metal_assets_string = trmnl.plugin_settings.custom_fields_values.metal_assets %}
 {% assign metal_assets = metal_assets_string | split: ',' %}
-
 {% for symbol in metal_assets %}
   {% assign symbol = symbol | strip %}
   {% if symbol != "" %}
@@ -80,12 +71,8 @@ Process metal assets
   {% endif %}
 {% endfor %}
 
-{% comment %}
-Process crypto assets
-{% endcomment %}
 {% assign crypto_assets_string = trmnl.plugin_settings.custom_fields_values.crypto_assets %}
 {% assign crypto_assets = crypto_assets_string | split: ',' %}
-
 {% for symbol in crypto_assets %}
   {% assign symbol = symbol | strip %}
   {% if symbol != "" %}
@@ -95,12 +82,8 @@ Process crypto assets
   {% endif %}
 {% endfor %}
 
-{% comment %}
-Process stock assets
-{% endcomment %}
 {% assign stock_assets_string = trmnl.plugin_settings.custom_fields_values.stock_assets %}
 {% assign stock_assets = stock_assets_string | split: ',' %}
-
 {% for symbol in stock_assets %}
   {% assign symbol = symbol | strip %}
   {% if symbol != "" %}
@@ -141,14 +124,10 @@ Process stock assets
       {% endif %}
   {% endcase %}
 
-  {%- comment -%} zero-pad numeric value (multiply to preserve decimals) {%- endcomment -%}
   {% assign padded_num = price | times: 1000000 | round %}
   {% assign padded = padded_num | prepend: "000000000000" | slice: -12, 12 %}
-
-  {%- comment -%} entry format: padded|SYMBOL|TYPE|RAWPRICE {%- endcomment -%}
   {% assign entry = padded | append: "|" | append: symbol | append: "|" | append: type | append: "|" | append: price %}
 
-  {%- comment -%} append to sortable_str using a separator that won't appear in data {%- endcomment -%}
   {% if sortable_str == "" %}
     {% assign sortable_str = entry %}
   {% else %}
@@ -156,7 +135,124 @@ Process stock assets
   {% endif %}
 {% endfor %}
 
-{%- comment -%} turn into a real array and sort by padded prefix (lexicographic), then reverse for DESC {%- endcomment -%}
 {% assign sortable = sortable_str | split: "§§§" %}
 {% assign sortable = sortable | sort %}
 {% assign sortable = sortable | reverse %}
+
+{% comment %}
+  SINGLE-SYMBOL DETAIL MODE
+{% endcomment %}
+
+{% assign symbol_count = all_symbols.size %}
+{% assign solo_ready = false %}
+
+{% if symbol_count == 1 and history.data %}
+  {% assign solo_parts = sortable[0] | split: "|" %}
+  {% assign solo_symbol = solo_parts[1] %}
+  {% assign solo_type = solo_parts[2] %}
+  {% assign solo_price = solo_parts[3] | times: 1.0 %}
+
+  {% assign hist_data = history.data %}
+  {% assign hist_n = hist_data.size %}
+  {% assign resolution = history.resolution | default: "daily" %}
+
+  {% if hist_n >= 2 %}
+    {% assign solo_ready = true %}
+
+    {% comment %} Map user choice to number of points (exact option string with spaces) {% endcomment %}
+    {% assign range_choice = trmnl.plugin_settings.custom_fields_values.history_range | default: "30_days" %}
+
+    {% if resolution == "hourly" %}
+      {% if range_choice == "1_day" %}
+        {% assign max_points = 24 %}
+      {% elsif range_choice == "7_days" %}
+        {% assign max_points = 168 %}
+      {% else %}
+        {% assign max_points = hist_n %}
+      {% endif %}
+    {% else %}
+      {% comment %} daily resolution {% endcomment %}
+      {% if range_choice == "1_day" %}
+        {% assign max_points = 1 %}
+      {% elsif range_choice == "7_days" %}
+        {% assign max_points = 7 %}
+      {% elsif range_choice == "30_days" %}
+        {% assign max_points = 30 %}
+      {% elsif range_choice == "90_days" %}
+        {% assign max_points = 90 %}
+      {% else %}
+        {% assign max_points = 30 %}
+      {% endif %}
+    {% endif %}
+
+    {% comment %} Slice the most recent points (selected range) {% endcomment %}
+    {% if hist_n > max_points %}
+      {% assign slice_start = hist_n | minus: max_points %}
+      {% assign recent = hist_data | slice: slice_start, max_points %}
+    {% else %}
+      {% assign recent = hist_data %}
+    {% endif %}
+    {% assign recent_n = recent.size %}
+
+    {% comment %} Latest history price and scaling factor {% endcomment %}
+    {% assign latest_idx = hist_n | minus: 1 %}
+    {% assign latest_point = hist_data[latest_idx] %}
+    {% assign latest_hist_price = latest_point.avg | times: 1.0 %}
+
+    {% if latest_hist_price != 0 %}
+      {% assign display_scale = solo_price | divided_by: latest_hist_price %}
+    {% else %}
+      {% assign display_scale = 1 %}
+    {% endif %}
+
+    {% comment %} Dynamic changes based on resolution {% endcomment %}
+    {% if resolution == "hourly" %}
+      {% assign change_steps = "1,24,72,168" | split: "," %}
+      {% assign change_labels = "1h,1d,3d,7d" | split: "," %}
+    {% else %}
+      {% assign change_steps = "1,7,30,90" | split: "," %}
+      {% assign change_labels = "1d,7d,30d,90d" | split: "," %}
+    {% endif %}
+
+    {% assign change_vals = "" %}
+    {% for step in change_steps %}
+      {% assign step_int = step | plus: 0 %}
+      {% assign idx = hist_n | minus: step_int | minus: 1 %}
+      {% if idx >= 0 %}
+        {% assign prev_price = hist_data[idx].avg | times: 1.0 %}
+        {% if prev_price != 0 %}
+          {% assign pct = latest_hist_price | minus: prev_price | times: 100.0 | divided_by: prev_price %}
+        {% else %}
+          {% assign pct = 0 %}
+        {% endif %}
+      {% else %}
+        {% assign pct = 0 %}
+      {% endif %}
+      {% if forloop.first %}
+        {% assign change_vals = pct %}
+      {% else %}
+        {% assign change_vals = change_vals | append: "," | append: pct %}
+      {% endif %}
+    {% endfor %}
+
+    {% assign change_labels_json = change_labels | join: '","' | prepend: '["' | append: '"]' %}
+    {% assign change_vals_json = change_vals | split: "," | join: ',' %}
+
+    {% comment %} Min/max for display labels (scaled) – use the selected range only {% endcomment %}
+    {% assign avg_vals = recent | map: 'avg' %}
+    {% assign avg_sorted = avg_vals | sort %}
+    {% assign graph_min_display = avg_sorted | first | times: display_scale %}
+    {% assign graph_max_display = avg_sorted | last | times: display_scale %}
+
+    {% comment %} Build series_current_json for the chart (selected range only) {% endcomment %}
+    {% assign series_current_json = "" %}
+    {% for p in recent %}
+      {% assign v = p.avg | times: display_scale %}
+      {% if forloop.first %}
+        {% assign series_current_json = '["' | append: p.timestamp | append: '",' | append: v | append: ']' %}
+      {% else %}
+        {% assign series_current_json = series_current_json | append: ',["' | append: p.timestamp | append: '",' | append: v | append: ']' %}
+      {% endif %}
+    {% endfor %}
+  {% endif %}
+{% endif %}

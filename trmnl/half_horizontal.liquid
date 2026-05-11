@@ -12,14 +12,12 @@ Determine grid layout based on number of symbols
 {% elsif symbol_count <= 12 %}
   {% assign grid_class = "grid grid--cols-2" %}
 {% else %}
-  {% comment %} Limit to 12 symbols maximum {% endcomment %}
   {% assign grid_class = "grid grid--cols-2" %}
   {% assign symbol_count = 12 %}
 {% endif %}
 
-<div class="layout layout--col gap--space-between">
-
-  {% if symbol_count == 0 %}
+{% if symbol_count == 0 %}
+  <div class="layout layout--col gap--space-between">
     <div class="grid">
       <div class="item">
         <div class="meta"></div>
@@ -29,17 +27,159 @@ Determine grid layout based on number of symbols
         </div>
       </div>
     </div>
-  
-  {% else %}
+  </div>
+
+{% elsif symbol_count == 1 and solo_ready %}
+  <div class="layout layout--col gap--space-between">
+
+    {% comment %} TOP STATS ROW: price + Low + High {% endcomment %}
+    <div class="grid">
+      <div class="row">
+        <div class="grid">
+          <div class="item col--span-2" data-vcenter="true">
+            <div class="meta"></div>
+            <div class="content">
+              <span class="value value--tnums" data-value-format="true">
+                {{ solo_price | round: 4 | number_to_currency: currency_symbol }}
+              </span>
+              <span class="label">{{ solo_symbol }} · {{ solo_type | capitalize }}</span>
+            </div>
+          </div>
+          <div class="item col--span-1" data-vcenter="true">
+            <div class="meta"></div>
+            <div class="content">
+              <span class="value value--xsmall value--tnums">
+                {{ graph_min_display | round: 4 | number_to_currency: currency_symbol }}
+              </span>
+              <span class="label">Low</span>
+            </div>
+          </div>
+          <div class="item col--span-1" data-vcenter="true">
+            <div class="meta"></div>
+            <div class="content">
+              <span class="value value--xsmall value--tnums">
+                {{ graph_max_display | round: 4 | number_to_currency: currency_symbol }}
+              </span>
+              <span class="label">High</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% comment %} SECOND STATS ROW: dynamic changes {% endcomment %}
+    <div class="grid">
+      <div class="row">
+        <div class="grid">
+          {% assign change_labels_array = change_labels_json | remove: '[' | remove: ']' | remove: '"' | split: ',' %}
+          {% assign change_vals_array = change_vals_json | split: ',' %}
+          {% for i in (0..change_labels_array.size) limit: 4 %}
+            {% assign label = change_labels_array[i] %}
+            {% assign val = change_vals_array[i] | times: 1.0 %}
+            <div class="item col--span-1" data-vcenter="true">
+              <div class="meta"></div>
+              <div class="content">
+                <span class="value value--xsmall value--tnums">
+                  {% if val >= 0 %}▲ +{{ val | round: 2 }}%
+                  {% else %}{% assign abs_val = 0 | minus: val %}▼ −{{ abs_val | round: 2 }}%{% endif %}
+                </span>
+                <span class="label">{{ label }}</span>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <script src="https://trmnl.com/js/highcharts/12.3.0/highcharts.js"></script>
+    <script src="https://trmnl.com/js/highcharts/12.3.0/highcharts-more.js"></script>
+    <script src="https://trmnl.com/js/highcharts/12.3.0/pattern-fill.js"></script>
+
+    <div id="chart-rabbitforex-hh" class="w--full" style="overflow:hidden;"></div>
+
+    <script type="text/javascript">
+      (function(){
+        var current = [{{ series_current_json }}];
+        Highcharts.chart('chart-rabbitforex-hh', {
+          chart: { type: 'spline', height: 100, animation: false, spacing: [5, 8, 5, 8] },
+          title: { text: null },
+          plotOptions: {
+            series: {
+              animation: false,
+              enableMouseTracking: false,
+              states: { hover: { enabled: false } },
+              marker: { enabled: false }
+            }
+          },
+          series: [{
+            data: current,
+            lineWidth: 4,
+            color: '#000000',
+            name: '{{ solo_symbol }}'
+          }],
+          tooltip: { enabled: false },
+          legend: { enabled: false },
+          yAxis: {
+            labels: { style: { fontSize: '12px', color: '#000000' } },
+            gridLineDashStyle: 'shortdot',
+            gridLineWidth: 1,
+            gridLineColor: '#000000',
+            tickAmount: 3,
+            title: { text: null }
+          },
+          xAxis: {
+            type: 'datetime',
+            labels: { style: { fontSize: '12px', color: '#000000' }, padding: 3, y: 18 },
+            lineWidth: 0,
+            gridLineDashStyle: 'dot',
+            tickWidth: 1,
+            tickLength: 0,
+            gridLineWidth: 1,
+            gridLineColor: '#000000',
+            tickPixelInterval: 100,
+            offset: 0,
+            margin: 0,
+            title: { text: null }
+          },
+          credits: { enabled: false }
+        });
+
+        // vertical centering
+        function verticallyCenterStatCells() {
+          var cells = document.querySelectorAll('[data-vcenter="true"]');
+          for (var i = 0; i < cells.length; i++) {
+            var item = cells[i];
+            var content = item.querySelector('.content');
+            if (content) {
+              content.style.display = 'flex';
+              content.style.flexDirection = 'column';
+              content.style.justifyContent = 'center';
+              content.style.height = '100%';
+              item.style.display = 'block';
+            }
+          }
+        }
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', verticallyCenterStatCells);
+        } else {
+          verticallyCenterStatCells();
+        }
+      })();
+    </script>
+  </div>
+
+{% else %}
+  {% comment %} MULTI-SYMBOL GRID {% endcomment %}
+  <div class="layout layout--col gap--space-between">
     <div class="{{ grid_class }}" data-overflow="true">
       {% for entry in sortable %}
         {% assign parts = entry | split: "|" %}
         {% assign symbol = parts[1] %}
         {% assign type = parts[2] %}
         {% assign price = parts[3] %}
-        
+
         {% assign price = 0 %}
-        
+
         {% case type %}
           {% when "forex" %}
             {% if forex.rates[symbol] %}
@@ -61,7 +201,7 @@ Determine grid layout based on number of symbols
               {% assign price = 1 | divided_by: stocks.rates[symbol] %}
             {% endif %}
         {% endcase %}
-        
+
         <div class="item">
           <div class="meta"></div>
           <div class="content">
@@ -71,13 +211,13 @@ Determine grid layout based on number of symbols
             <span class="label">
               {% case type %}
                 {% when "forex" %}
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-cash"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 9m0 1a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v8a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1z" /><path d="M12 14a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 9m0 1a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v8a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1z" /><path d="M12 14a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" /></svg>
                 {% when "metal" %}
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-medal"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 4v3m-4 -3v6m8 -6v6" /><path d="M12 18.5l-3 1.5l.5 -3.5l-2 -2l3 -.5l1.5 -3l1.5 3l3 .5l-2 2l.5 3.5z" /></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v3m-4 -3v6m8 -6v6" /><path d="M12 18.5l-3 1.5l.5 -3.5l-2 -2l3 -.5l1.5 -3l1.5 3l3 .5l-2 2l.5 3.5z" /></svg>
                 {% when "crypto" %}
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-coin-bitcoin"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M9 8h4.09c1.055 0 1.91 .895 1.91 2s-.855 2 -1.91 2c1.055 0 1.91 .895 1.91 2s-.855 2 -1.91 2h-4.09" /><path d="M10 12h4" /><path d="M10 7v10v-9" /><path d="M13 7v1" /><path d="M13 16v1" /></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M9 8h4.09c1.055 0 1.91 .895 1.91 2s-.855 2 -1.91 2c1.055 0 1.91 .895 1.91 2s-.855 2 -1.91 2h-4.09" /><path d="M10 12h4" /><path d="M10 7v10" /></svg>
                 {% when "stock" %}
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-chart-line"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 19l16 0" /><path d="M4 15l4 -6l4 2l4 -5l4 4" /></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19l16 0" /><path d="M4 15l4 -6l4 2l4 -5l4 4" /></svg>
               {% endcase %}
               {{ symbol }}
             </span>
@@ -85,6 +225,5 @@ Determine grid layout based on number of symbols
         </div>
       {% endfor %}
     </div>
-  {% endif %}
-
-</div>
+  </div>
+{% endif %}
